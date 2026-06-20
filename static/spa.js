@@ -138,9 +138,15 @@ const NewScan = {
       }
     }
 
-    return { METHODS, method, tools, f, w, error, submitting, needActiveAttest, pickFile, submit };
+    const engineReady = computed(() => !!tools.value["chromium(動態)"]);
+    return { METHODS, method, tools, f, w, error, submitting, needActiveAttest, pickFile, submit, engineReady };
   },
   template: `
+  <div class="enginebar" :class="engineReady ? 'ok' : 'warn'">
+    <span class="dot"></span>
+    <span v-if="engineReady"><strong>動態測試引擎(Chromium):就緒</strong> — 灰箱掃描會自動執行 JS、攔截真正的 API 呼叫。</span>
+    <span v-else><strong>動態測試引擎(Chromium):未安裝</strong> — 灰箱將退回靜態爬取 + 後端 API 內容探索;部署執行 <code>playwright install --with-deps chromium</code> 以啟用動態。</span>
+  </div>
   <section class="card">
     <h2>開始新測試</h2>
     <p class="hint">選擇測試方法論 — 系統依方法論只顯示相關欄位。</p>
@@ -313,11 +319,22 @@ const ScanView = {
         </div>
         <div v-if="snap.current_check" class="hint">目前:{{ snap.current_check }}</div>
         <div class="stats" style="margin-top:1rem">
-          <div class="stat"><div class="n">{{ snap.war.pages ?? '–' }}</div><div class="c">頁面</div></div>
+          <div class="stat"><div class="n">{{ snap.war.pages ?? '–' }}</div><div class="c">前端頁面</div></div>
           <div class="stat"><div class="n">{{ snap.war.forms ?? '–' }}</div><div class="c">表單</div></div>
           <div class="stat"><div class="n">{{ snap.war.points ?? '–' }}</div><div class="c">注入點</div></div>
           <div class="stat"><div class="n">{{ snap.war.checks_done }}/{{ snap.war.checks_total }}</div><div class="c">檢查項</div></div>
           <div class="stat"><div class="n">{{ snap.war.findings }}</div><div class="c">弱點</div></div>
+        </div>
+        <!-- 登入後內部(灰箱)即時覆蓋 -->
+        <div v-if="snap.war.authenticated" class="box info" style="margin-top:1rem">
+          <div class="box-legend" style="color:var(--accent-2)">🔐 登入後內部(後端 API)</div>
+          <div class="stats">
+            <div class="stat"><div class="n">{{ snap.war.apis }}</div><div class="c">後端 API 已探出</div></div>
+            <div class="stat"><div class="n">{{ snap.war.authz_tested }}</div><div class="c">已測授權</div></div>
+            <div class="stat"><div class="n" :style="{color: snap.war.authz_bac ? 'var(--critical)' : 'var(--accent)'}">{{ snap.war.authz_bac }}</div><div class="c">缺少授權</div></div>
+          </div>
+          <p v-if="snap.status==='done' && snap.war.apis===0" class="hint" style="margin-top:.6rem">
+            尚未探出可測的後端 API 端點。若為 JS 應用,請確認<strong>動態引擎已就緒</strong>,或在表單手動指定 API 端點後重掃。</p>
         </div>
       </section>
 

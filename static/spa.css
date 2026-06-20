@@ -150,4 +150,16 @@ textarea.input { font-family: var(--mono); font-size: .85rem; }
 .table th { color: var(--accent); font-size: .74rem; text-transform: uppercase; font-family: var(--mono); }
 .table tr:hover td { background: rgba(46,230,166,.05); }
 .empty { text-align: center; color: var(--muted); padding: 1.4rem 0; }
+
+/* ---- 動態引擎狀態列 ---- */
+.enginebar { display: flex; align-items: center; gap: .6rem; padding: .6rem 1rem; margin-bottom: 1.1rem;
+  border-radius: var(--radius-sm); border: 1px solid var(--border); font-size: .88rem; color: var(--ink-2); }
+.enginebar .dot { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; }
+.enginebar.ok { background: rgba(46,230,166,.08); border-color: rgba(46,230,166,.4); }
+.enginebar.ok .dot { background: var(--ok); box-shadow: 0 0 10px var(--ok); }
+.enginebar.warn { background: rgba(255,194,75,.08); border-color: rgba(255,194,75,.4); }
+.enginebar.warn .dot { background: var(--warn); box-shadow: 0 0 10px var(--warn); }
+.enginebar strong { color: var(--ink); }
+.enginebar code { font-size: .82rem; color: var(--accent); }
+
 @media (max-width: 640px){ .tab { flex-basis: 100%; } }
