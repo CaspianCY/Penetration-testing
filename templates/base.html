@@ -7,23 +7,36 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
+  {% set ep = request.endpoint %}
+  {% set nav_active = {
+    'index': 'index', 'start_scan': 'index', 'scan_view': 'scans_list',
+    'dashboard': 'dashboard', 'scans_list': 'scans_list',
+    'engagements_list': 'engagements_list', 'engagement_view': 'engagements_list',
+  } %}
+  {% set cur = nav_active.get(ep, ep) %}
   <header>
     <div class="header-row">
-      <h1><a href="{{ url_for('index') }}">🛡️ Sentinel</a></h1>
+      <a class="brand" href="{{ url_for('index') }}">
+        <span class="brand-mark">🛡️</span>
+        <span class="brand-text">
+          <span class="brand-name">Sentinel</span>
+          <span class="brand-sub">滲透測試平台</span>
+        </span>
+      </a>
       <nav class="nav">
-        <a href="{{ url_for('index') }}">新掃描</a>
-        <a href="{{ url_for('dashboard') }}">儀表板</a>
-        <a href="{{ url_for('scans_list') }}">掃描紀錄</a>
-        <a href="{{ url_for('engagements_list') }}">案件報告</a>
+        <a href="{{ url_for('index') }}" class="{{ 'active' if cur == 'index' }}">＋ 新掃描</a>
+        <a href="{{ url_for('dashboard') }}" class="{{ 'active' if cur == 'dashboard' }}">儀表板</a>
+        <a href="{{ url_for('scans_list') }}" class="{{ 'active' if cur == 'scans_list' }}">掃描紀錄</a>
+        <a href="{{ url_for('engagements_list') }}" class="{{ 'active' if cur == 'engagements_list' }}">案件報告</a>
       </nav>
     </div>
-    <p class="tagline">授權式 Web 弱點掃描與報告平台 — 僅供你擁有或已獲授權測試的目標</p>
   </header>
   <main>
     {% block content %}{% endblock %}
   </main>
   <footer>
-    <p>非破壞性掃描 · 不含規避偵測功能 · 使用前請閱讀 AUTHORIZATION.md</p>
+    <p>授權式 Web 弱點掃描與報告平台 · 非破壞性掃描 · 不含規避偵測功能</p>
+    <p class="foot-sub">僅供你擁有或已獲授權測試的目標 — 使用前請閱讀 AUTHORIZATION.md</p>
   </footer>
   {% block scripts %}{% endblock %}
 </body>

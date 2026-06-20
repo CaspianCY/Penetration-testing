@@ -12,14 +12,20 @@
   <p id="status-line" class="muted">狀態:<span id="status">pending</span>
      ｜ 目前檢查:<span id="current-check">—</span></p>
 
+  {% if error %}<div class="alert">⚠️ {{ error }}</div>{% endif %}
+
   <div class="sev-summary" id="sev-summary"></div>
 
   <div class="actions">
     <button id="ai-btn" disabled>🤖 AI 分析與修補計畫</button>
+    <form method="post" action="{{ url_for('scan_to_engagement', job_id=job.id) }}" style="display:inline">
+      <button type="submit" id="eng-btn" class="btn-link">📁 歸檔為案件並產生 .docx 報告</button>
+    </form>
     <a id="dl-html" class="btn-link" href="{{ url_for('download_report', job_id=job.id, fmt='html') }}">下載 HTML 報告</a>
     <a id="dl-md" class="btn-link" href="{{ url_for('download_report', job_id=job.id, fmt='md') }}">下載 Markdown</a>
     <a id="dl-json" class="btn-link" href="{{ url_for('download_report', job_id=job.id, fmt='json') }}">下載 JSON</a>
   </div>
+  <p class="hint">「歸檔為案件」會把這次掃描結果存成正式案件,產出對齊業界規模的 .docx 報告書(含攻擊路徑與可達深度分析),並支援跨次稽核的 New / Recurring / Fixed 比對。</p>
 </section>
 
 <section class="card" id="crawl-card" hidden>

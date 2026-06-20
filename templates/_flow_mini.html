@@ -1,4 +1,4 @@
-<div class="flow-mini" title="可達深度:{{ flow.depth_label }}">
+<div class="flow-mini" title="可達深度:{{ flow.depth_label }}{% if flow.blocked_summary %}｜{{ flow.blocked_summary }}{% endif %}">
   {% for s in flow.stages %}
   <span class="flow-dot {{ 'on' if s.reached else 'off' }} {{ 'deep' if s.is_deepest else '' }}">{{ s.icon }}</span>
   {% if not loop.last %}<span class="flow-arrow {{ 'on' if flow.stages[loop.index].reached else '' }}">›</span>{% endif %}

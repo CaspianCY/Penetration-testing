@@ -237,6 +237,44 @@ def download_report(job_id: str, fmt: str):
     abort(404)
 
 
+@app.route("/scan/<job_id>/engagement", methods=["POST"])
+def scan_to_engagement(job_id: str):
+    """把一次掃描歸檔為正式案件,並產出專業 .docx 報告。
+
+    補上「網站只能跑掃描、無法產出 .docx」的缺口:web 使用者也能一鍵
+    從掃描結果建立 Engagement 並下載 Volvo 規模的報告書。
+    """
+    from pentest.engagement import Engagement
+
+    job = manager.get(job_id)
+    if not job:
+        abort(404)
+    if job.status != "done":
+        return redirect(url_for("scan_view", job_id=job_id))
+
+    # 依掃描設定推導方法論 / 測試類型
+    test_type = "DAST"
+    methodology = "grey-box" if (job.scope.__dict__.get("auth_headers") or
+                                 job.scope.__dict__.get("cookies")) else "black-box"
+    name = (request.form.get("name") or "").strip() or f"{job.scope.target} 滲透測試"
+    tester = (request.form.get("tester") or "").strip() or "Sentinel 平台"
+    client = (request.form.get("client") or "").strip()
+
+    eng = Engagement(
+        target=job.scope.target, name=name, methodology=methodology,
+        test_type=test_type, tester=tester, client=client,
+        scope=[job.scope.target],
+    )
+    eng.log_action(f"由掃描任務 {job.id} 歸檔建立案件(模式:{'主動' if job.active else '被動'}"
+                   f"{'+工具編排' if job.deep else ''})")
+    try:
+        storage.save_engagement(eng, job.findings)
+    except Exception as exc:
+        return render_template("scan.html", job=job,
+                               error=f"建立案件失敗:{exc}"), 500
+    return redirect(url_for("engagement_view", eng_id=eng.id))
+
+
 def _startup_banner() -> None:
     """印出資料庫位置與現有筆數(密碼遮罩),讓使用者確認設定。"""
     print(f"[Sentinel] 資料庫:{_mask(_DB_URL)}")
