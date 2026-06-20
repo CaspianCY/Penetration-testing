@@ -29,11 +29,12 @@ COPY requirements.txt .
 RUN pip3 install --no-cache-dir --break-system-packages -r requirements.txt gunicorn
 
 COPY . .
+RUN chmod +x entrypoint.sh
 
 # 預先下載 nuclei 模板(失敗不擋 build,執行期仍可更新)
 RUN nuclei -update-templates || true
 
-EXPOSE 5000
+EXPOSE 5000 8080
 
-# 單一 worker(讓記憶體中的掃描任務狀態一致)+ 多執行緒處理併發
-CMD ["gunicorn", "-w", "1", "--threads", "8", "--timeout", "120", "-b", "0.0.0.0:5000", "app:app"]
+# entrypoint 會綁定到平台指派的埠(Zeabur 注入 PORT;否則 SENTINEL_PORT;預設 5000)
+CMD ["./entrypoint.sh"]

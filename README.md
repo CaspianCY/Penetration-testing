@@ -97,6 +97,23 @@ docker compose up --build
 > 「深度掃描」的設計是**有裝就用、沒裝退回內建檢查**——所以不在 Kali 容器、
 > 只裝部分工具時也能跑,缺的工具會在主控台標示「未安裝」。
 
+### 部署到 Zeabur / 雲端平台
+
+平台會自動 build 根目錄的 `Dockerfile`。需要設定的環境變數:
+
+| 變數 | 用途 |
+|---|---|
+| `SENTINEL_PASSWORD`(或 `PASSWORD`) | **啟用登入保護**。公開部署**務必設定**,否則任何人都能用它掃描任意目標。 |
+| `DATABASE_URL` | PostgreSQL 連線字串。或改設下列 `POSTGRES_*`。 |
+| `POSTGRES_HOST` / `POSTGRES_PORT` / `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | 未給 `DATABASE_URL` 時由這些自動組合(需要 `POSTGRES_HOST`)。 |
+| `PORT`(平台注入)/ `SENTINEL_PORT` | 監聽埠;`entrypoint.sh` 會自動套用。 |
+| `ANTHROPIC_API_KEY` | 選用,啟用 AI 模組。 |
+
+> ⚠️ **公開部署的安全須知**:這是一個會主動對目標送出掃描/攻擊流量的工具。
+> 公開在網路上而**不設 `SENTINEL_PASSWORD`**,等於讓任何人拿你的伺服器去攻擊
+> 任意目標——務必設定登入密碼,並考慮以 `SENTINEL_ALLOWED_HOSTS` 限制可掃目標。
+> 環境變數請只在平台的設定介面填寫,**切勿提交進版控**。
+
 ### 案件編排與專業報告(engage.py)
 
 `engage.py` 依 PTES 階段執行一次完整案件並產出 `.docx` 報告:

@@ -5,7 +5,10 @@
 
 from __future__ import annotations
 
+import hmac
 import os
+import re
+from urllib.parse import quote_plus
 
 from flask import (
     Flask,
@@ -26,18 +29,64 @@ from pentest.storage import Storage
 
 app = Flask(__name__)
 
-# 正式部署請設定 DATABASE_URL 指向 PostgreSQL,例如:
-#   postgresql+psycopg://user:pass@localhost:5432/sentinel
-#
-# 未設定時退回單檔 SQLite。注意:SQLite 檔是本機檔案,且被 .gitignore 忽略,
-# 在會被回收/重新 clone 的臨時環境(如雲端容器)中無法長期保存——要持久請用
-# PostgreSQL。預設路徑採「絕對路徑」(錨定在本檔所在目錄),避免從不同工作目錄
-# 啟動時各自產生不同的空白資料庫。
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _DEFAULT_DB = "sqlite:///" + os.path.join(_HERE, "sentinel.db")
-_DB_URL = os.environ.get("DATABASE_URL", _DEFAULT_DB)
+
+
+def _resolve_database_url() -> str:
+    """決定資料庫連線字串。
+
+    優先 DATABASE_URL;否則由 POSTGRES_* 環境變數組合(適配 Zeabur 等平台);
+    都沒有時退回本機 SQLite。
+    """
+    url = os.environ.get("DATABASE_URL")
+    if url:
+        return url
+    user = os.environ.get("POSTGRES_USER")
+    pw = os.environ.get("POSTGRES_PASSWORD")
+    db = os.environ.get("POSTGRES_DB")
+    if user and pw and db:
+        host = (os.environ.get("POSTGRES_HOST")
+                or os.environ.get("POSTGRESQL_HOST") or "postgresql")
+        port = os.environ.get("POSTGRES_PORT", "5432")
+        return f"postgresql+psycopg://{quote_plus(user)}:{quote_plus(pw)}@{host}:{port}/{db}"
+    return _DEFAULT_DB
+
+
+def _mask(url: str) -> str:
+    return re.sub(r"://([^:/]+):([^@]+)@", r"://\1:***@", url or "")
+
+
+def _resolve_port() -> int:
+    for key in ("PORT", "SENTINEL_PORT"):
+        v = os.environ.get(key, "")
+        if v.isdigit():
+            return int(v)
+    return 5000
+
+
+_DB_URL = _resolve_database_url()
 storage = Storage(_DB_URL)
 manager = ScanManager(storage=storage)
+
+# 選用的 HTTP Basic 登入保護(公開部署強烈建議)。
+# 設定 SENTINEL_PASSWORD(或 PASSWORD)即啟用;未設定則不啟用(本機方便用)。
+_AUTH_USER = os.environ.get("SENTINEL_USER", "sentinel")
+_AUTH_PASSWORD = os.environ.get("SENTINEL_PASSWORD") or os.environ.get("PASSWORD")
+
+
+@app.before_request
+def _require_login():
+    if not _AUTH_PASSWORD:
+        return None
+    auth = request.authorization
+    if (auth and auth.username == _AUTH_USER
+            and hmac.compare_digest(auth.password or "", _AUTH_PASSWORD)):
+        return None
+    return Response(
+        "需要登入。", 401,
+        {"WWW-Authenticate": 'Basic realm="Sentinel"'},
+    )
 
 
 def _tools_summary() -> dict:
@@ -189,15 +238,16 @@ def download_report(job_id: str, fmt: str):
 
 
 def _startup_banner() -> None:
-    """印出資料庫位置與現有筆數,讓使用者一眼看出資料存到哪、是否讀到空 DB。"""
-    print(f"[Sentinel] 資料庫:{_DB_URL}")
+    """印出資料庫位置與現有筆數(密碼遮罩),讓使用者確認設定。"""
+    print(f"[Sentinel] 資料庫:{_mask(_DB_URL)}")
+    print(f"[Sentinel] 登入保護:{'啟用(HTTP Basic)' if _AUTH_PASSWORD else '未啟用 — 公開部署請設定 SENTINEL_PASSWORD'}")
     if _DB_URL.startswith("sqlite"):
         path = _DB_URL.replace("sqlite:///", "")
         exists = os.path.exists(path)
         print(f"[Sentinel] SQLite 檔:{path}（{'已存在' if exists else '將新建'}）")
         if not os.environ.get("DATABASE_URL"):
-            print("[Sentinel] ⚠ 使用預設 SQLite。臨時環境(雲端容器)重啟會清空,"
-                  "要長期保存請設定 DATABASE_URL 指向 PostgreSQL。")
+            print("[Sentinel] ⚠ 使用本機 SQLite。臨時/雲端環境重啟會清空,"
+                  "要長期保存請設定 DATABASE_URL 或 POSTGRES_* 指向 PostgreSQL。")
     try:
         dd = storage.dashboard_data()
         print(f"[Sentinel] 現有資料:掃描 {dd['scans_total']} 筆、案件 {dd['engagements_total']} 筆、"
@@ -208,6 +258,6 @@ def _startup_banner() -> None:
 
 if __name__ == "__main__":
     host = os.environ.get("SENTINEL_HOST", "127.0.0.1")
-    port = int(os.environ.get("SENTINEL_PORT", "5000"))
+    port = _resolve_port()
     _startup_banner()
     app.run(host=host, port=port, debug=False)
