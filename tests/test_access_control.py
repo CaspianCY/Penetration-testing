@@ -82,6 +82,8 @@ def test_properly_protected_api_no_finding():
         srv.shutdown()
     assert not any(f.check_id.startswith("authz-bac-") for f in res)
     assert any(f.check_id == "authz-enforced-ok" for f in res)   # 有做測試的佐證
+    # 覆蓋摘要應反映「實際測試的端點數」(而非 finding 筆數)
+    assert ctx.notes.get("authz_tested") == 1 and ctx.notes.get("authz_bac") == 0
 
 
 def test_spa_shell_for_anon_is_not_false_positive():
