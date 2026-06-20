@@ -102,6 +102,24 @@ def test_capture_masks_sensitive_query_values():
     assert "secret" not in url and "xyz" not in url and "abc" not in url
 
 
+def test_diagnose_no_form_messages():
+    from pentest.auth_login import _diagnose_no_form
+
+    class R:
+        def __init__(self, text, url="https://x/login.html", status=200):
+            self.text, self.url, self.status_code = text, url, status
+
+    js = _diagnose_no_form(R('<html><head><script src="/a.js"></script></head>'
+                             '<body><div id="app"></div></body></html>'))
+    assert "JavaScript" in js and "Cookie" in js        # JS 應用 → 引導貼 Cookie
+
+    none = _diagnose_no_form(R('<html><body>hi</body></html>', url="https://x/"))
+    assert "沒有 <form>" in none                         # 完全沒表單 → 可能網址錯
+
+    nopw = _diagnose_no_form(R('<html><body><form><input name="q"></form></body></html>'))
+    assert "沒有密碼欄位" in nopw
+
+
 def test_capture_off_records_nothing():
     ctx = ScanContext(target="http://t/", capture=False)
     ctx.record("GET", "http://t/", 200)
