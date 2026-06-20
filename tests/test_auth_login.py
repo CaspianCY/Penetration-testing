@@ -165,6 +165,37 @@ def test_discover_login_url_finds_common_path():
     assert found.endswith("/login")
 
 
+def test_verify_session_confirms_or_denies_auth():
+    """登入後驗證:有效 token → 已驗證;無效 token → 401 判定未過。"""
+    class H(BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def do_GET(self):
+            if self.path == "/api/users/me" and self.headers.get("Authorization") == "Bearer good":
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(b'{"name":"mandy"}')
+            else:
+                self.send_response(401 if self.path.startswith("/api/") else 404)
+                self.end_headers()
+                self.wfile.write(b"{}")
+
+    srv = HTTPServer(("127.0.0.1", 0), H)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    base = f"http://127.0.0.1:{srv.server_port}/"
+    try:
+        good = ScanContext(target=base, polite=False, auth_headers={"Authorization": "Bearer good"})
+        v1, path1, _ = auth_login.verify_session(good)
+        bad = ScanContext(target=base, polite=False, auth_headers={"Authorization": "Bearer bad"})
+        v2, _, detail2 = auth_login.verify_session(bad)
+    finally:
+        srv.shutdown()
+    assert v1 and path1 == "/api/users/me"
+    assert not v2 and "401" in detail2
+
+
 def test_json_api_login_tries_field_name_variants():
     """端點存在但回 401(欄位名不符)→ 應輪流試其他欄位名(account)直到成功。"""
     import json as _json
