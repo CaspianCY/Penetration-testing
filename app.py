@@ -28,6 +28,7 @@ from pentest.scanner import ScanManager
 from pentest.storage import Storage
 
 app = Flask(__name__)
+app.config["MAX_CONTENT_LENGTH"] = 25 * 1024 * 1024   # 白箱原始碼上傳上限 25MB
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _DEFAULT_DB = "sqlite:///" + os.path.join(_HERE, "sentinel.db")
@@ -189,6 +190,72 @@ def engagement_report(eng_id: str):
         tmp.name, as_attachment=True, download_name=f"{eng_id}.docx",
         mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     )
+
+
+def _safe_extract(zf, dest: str) -> int:
+    """安全解壓(防 zip-slip),回傳解出的檔案數。"""
+    import os as _os
+    dest_abs = _os.path.abspath(dest)
+    n = 0
+    for member in zf.infolist()[:3000]:
+        target = _os.path.abspath(_os.path.join(dest, member.filename))
+        if target == dest_abs or target.startswith(dest_abs + _os.sep):
+            zf.extract(member, dest)
+            n += 1
+    return n
+
+
+@app.route("/sast", methods=["GET", "POST"])
+def sast_view():
+    """白箱:原始碼靜態分析(SAST)。貼上程式碼或上傳 .zip,產出 white-box 案件報告。"""
+    if request.method == "GET":
+        return render_template("sast.html")
+
+    import shutil
+    import tempfile
+    import zipfile
+
+    name = (request.form.get("name", "") or "").strip() or "白箱原始碼分析"
+    tester = (request.form.get("tester", "") or "").strip() or "Sentinel 平台"
+    if request.form.get("attested") != "on":
+        return render_template("sast.html", error="請先確認你有權分析這份原始碼。"), 400
+
+    tmp = tempfile.mkdtemp(prefix="sentinel_sast_")
+    try:
+        wrote = False
+        up = request.files.get("source_zip")
+        if up and up.filename:
+            zpath = os.path.join(tmp, "_upload.zip")
+            up.save(zpath)
+            try:
+                with zipfile.ZipFile(zpath) as zf:
+                    wrote = _safe_extract(zf, tmp) > 0
+            except zipfile.BadZipFile:
+                return render_template("sast.html", error="上傳的不是有效的 .zip 檔。"), 400
+            finally:
+                if os.path.exists(zpath):
+                    os.remove(zpath)
+        code = request.form.get("source_code", "")
+        if code.strip():
+            fname = os.path.basename((request.form.get("filename", "") or "snippet.txt").strip()) or "snippet.txt"
+            with open(os.path.join(tmp, fname), "w", encoding="utf-8") as fh:
+                fh.write(code)
+            wrote = True
+        if not wrote:
+            return render_template("sast.html", error="請貼上原始碼,或上傳 .zip 原始碼壓縮檔。"), 400
+
+        from pentest.engagement import Engagement
+        from pentest.sast import scan_path
+        findings = scan_path(tmp, target_name=name)
+        eng = Engagement(target=name, name=name, methodology="white-box",
+                         test_type="SAST", tester=tester)
+        eng.log_action("白箱 SAST 原始碼分析(由網站上傳)")
+        storage.save_engagement(eng, findings)
+        return redirect(url_for("engagement_view", eng_id=eng.id))
+    except Exception as exc:
+        return render_template("sast.html", error=f"分析失敗:{exc}"), 500
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
 
 
 @app.route("/scan", methods=["POST"])

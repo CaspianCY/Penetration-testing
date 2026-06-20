@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}白箱原始碼分析 — Sentinel{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>白箱(原始碼分析 / SAST)</h2>
+  {% if error %}<div class="alert">⚠️ {{ error }}</div>{% endif %}
+  <p class="hint">直接分析<strong>原始碼</strong>找漏洞(SQLi / 命令注入 / 硬編碼憑證 / XSS / 不安全反序列化 /
+    弱加密 / 已知漏洞套件…),不需執行程式。分析完會產生一個<strong>白箱案件</strong>,
+    含攻擊路徑與可下載的 .docx 報告(與灰箱 / 黑箱同一套報告流程)。</p>
+
+  <form method="post" action="{{ url_for('sast_view') }}" enctype="multipart/form-data">
+    <div class="field" style="display:flex;gap:.8rem;flex-wrap:wrap">
+      <span style="flex:1 1 16rem">
+        <label for="name">案件名稱</label>
+        <input type="text" id="name" name="name" placeholder="例:my-app 原始碼稽核" autocomplete="off">
+      </span>
+      <span style="flex:1 1 12rem">
+        <label for="tester">撰寫者</label>
+        <input type="text" id="tester" name="tester" placeholder="(撰寫人姓名)" autocomplete="off">
+      </span>
+    </div>
+
+    <div class="field">
+      <label for="source_zip">上傳原始碼 .zip(建議,可分析整個專案)</label>
+      <input type="file" id="source_zip" name="source_zip" accept=".zip"
+             style="width:100%;padding:.6rem;border:1.5px solid var(--border);border-radius:9px;background:#0b131d;color:var(--ink)">
+      <p class="hint">會自動略過 node_modules / .git 等;含 package.json 時一併檢查已知漏洞套件。上限 25MB。</p>
+    </div>
+
+    <div class="field">
+      <label for="source_code">或直接貼上程式碼(單檔)</label>
+      <textarea id="source_code" name="source_code" rows="10" autocomplete="off"
+        style="width:100%;padding:.8rem .95rem;border:1.5px solid var(--border);border-radius:9px;background:#0b131d;color:var(--ink);font-family:var(--mono);font-size:.85rem"
+        placeholder="把要分析的程式碼貼在這裡…"></textarea>
+    </div>
+    <div class="field sub">
+      <label for="filename">檔名(決定套用哪種語言規則)</label>
+      <input type="text" id="filename" name="filename" value="snippet.js" style="width:12rem">
+    </div>
+
+    <label class="checkbox attest">
+      <input type="checkbox" name="attested" required>
+      <span class="lt">我確認我<strong>有權分析</strong>這份原始碼(自有或已獲授權)。</span>
+    </label>
+
+    <button type="submit">🔬 開始白箱分析</button>
+  </form>
+  <p class="hint footnote">SAST 為靜態型樣比對,無法涵蓋所有漏洞;建議搭配灰箱 / 黑箱動態測試(DAST)互補。</p>
+</section>
+{% endblock %}
