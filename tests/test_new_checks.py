@@ -214,3 +214,110 @@ def test_idor_no_fp_when_neighbor_404():
     finally:
         srv.shutdown()
     assert res == []      # 相鄰 ID 回 404 → 有做物件層級授權,不誤報
+
+
+# ---------------- Command injection (active) ----------------
+def test_cmdi_time_based_detected(monkeypatch):
+    import time as _t
+    from pentest.checks import active
+    from pentest.crawler import InjectionPoint
+
+    class R:
+        text = ""; status_code = 200; headers = {}; content = b""
+
+    def fake_request(ctx, point, value, **k):
+        if "sleep 5" in value:
+            _t.sleep(5.0)
+        return R()
+
+    monkeypatch.setattr(active, "_request", fake_request)
+    pt = InjectionPoint(method="GET", url="http://t/run", params={"cmd": "1"}, target_param="cmd")
+    ctx = ScanContext(target="http://t/", aggressive=True, polite=False)
+    f = active._check_cmdi(ctx, pt, R())
+    assert f and f.check_id.startswith("active-cmdi") and f.severity == Severity.CRITICAL
+    assert f.owasp.startswith("A03")
+
+
+def test_cmdi_skipped_without_aggressive():
+    from pentest.checks import active
+    from pentest.crawler import InjectionPoint
+    pt = InjectionPoint(method="GET", url="http://t/run", params={"cmd": "1"}, target_param="cmd")
+    ctx = ScanContext(target="http://t/", aggressive=False, polite=False)
+    assert active._check_cmdi(ctx, pt, None) is None
+
+
+# ---------------- SSRF (active, metadata-focused) ----------------
+def test_ssrf_metadata_detected(monkeypatch):
+    from pentest.checks import active
+    from pentest.crawler import InjectionPoint
+
+    class R:
+        def __init__(self, t):
+            self.text = t; self.status_code = 200; self.headers = {}; self.content = t.encode()
+
+    def fake_request(ctx, point, value, **k):
+        if "169.254.169.254" in value:
+            return R("ami-id\ninstance-id\ninstance-type\nlocal-ipv4\niam/\n")
+        return R("ok")
+
+    monkeypatch.setattr(active, "_request", fake_request)
+    pt = InjectionPoint(method="GET", url="http://t/fetch", params={"url": "http://x"}, target_param="url")
+    ctx = ScanContext(target="http://t/", polite=False)
+    f = active._check_ssrf(ctx, pt, R("ok"))
+    assert f and f.check_id.startswith("active-ssrf") and f.owasp.startswith("A10")
+
+
+def test_ssrf_no_fp_on_non_url_param(monkeypatch):
+    from pentest.checks import active
+    from pentest.crawler import InjectionPoint
+    pt = InjectionPoint(method="GET", url="http://t/x", params={"q": "1"}, target_param="q")
+    ctx = ScanContext(target="http://t/", polite=False)
+    assert active._check_ssrf(ctx, pt, None) is None     # 參數名非 URL 型 → 不測
+
+
+# ---------------- GraphQL introspection ----------------
+def test_graphql_introspection_open():
+    from pentest.checks import graphql
+
+    class H(BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def do_POST(self):
+            if self.path.rstrip("/").endswith("graphql"):
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(b'{"data":{"__schema":{"queryType":{"name":"Query"},'
+                                 b'"types":[{"name":"User"},{"name":"Secret"}]}}}')
+            else:
+                self.send_response(404)
+                self.end_headers()
+
+    srv = _serve(H)
+    try:
+        ctx = ScanContext(target=f"http://127.0.0.1:{srv.server_port}/", polite=False)
+        res = graphql.run(ctx)
+    finally:
+        srv.shutdown()
+    assert any(f.check_id == "graphql-introspection" and f.severity == Severity.MEDIUM for f in res)
+
+
+def test_graphql_absent_no_finding():
+    from pentest.checks import graphql
+
+    class H(BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def do_POST(self):
+            self.send_response(404)
+            self.end_headers()
+
+    srv = _serve(H)
+    try:
+        ctx = ScanContext(target=f"http://127.0.0.1:{srv.server_port}/", polite=False)
+        res = graphql.run(ctx)
+    finally:
+        srv.shutdown()
+    assert res == []

@@ -216,7 +216,7 @@ const NewScan = {
       <div class="box danger">
         <div class="box-legend">⚡ 主動測試(進階)</div>
         <label class="check"><input type="checkbox" v-model="f.active">
-          <span>對表單與參數送出<strong>非破壞性</strong>注入 / XSS / 轉址探測,驗證「是否打得進、是否可能竄改」;並對登入試一份精選預設帳密 + 檢查登入速率限制。</span></label>
+          <span>對表單與參數送出<strong>非破壞性</strong>注入(SQLi / 命令注入)/ XSS / 轉址 / SSRF 探測,驗證「是否打得進、是否可能竄改」;並對登入試一份精選預設帳密 + 檢查登入速率限制。</span></label>
         <label class="check" style="margin-left:1.6rem"><input type="checkbox" v-model="f.aggressive">
           <span>併用時間延遲偵測 <span class="muted">(對目標負載較高,偵測較準)</span></span></label>
         <label class="check"><input type="checkbox" v-model="f.deep">
