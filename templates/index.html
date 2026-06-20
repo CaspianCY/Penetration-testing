@@ -15,6 +15,15 @@
       <span class="lt">低衝擊模式<span class="muted">(限速、降低對目標負載 — 建議開啟)</span></span>
     </label>
 
+    <label class="checkbox">
+      <input type="checkbox" name="crawl" id="crawl-toggle" checked>
+      <span class="lt">爬取整站<span class="muted">(探索同網域的多個頁面、表單與端點,而非只測單一網頁)</span></span>
+    </label>
+    <div class="field sub" id="max-pages-field">
+      <label for="max_pages">爬取頁數上限</label>
+      <input type="number" id="max_pages" name="max_pages" value="40" min="1" max="100" style="width:6rem">
+    </div>
+
     <fieldset class="active-box">
       <legend>⚡ 主動測試(進階)</legend>
       <label class="checkbox">
@@ -71,6 +80,12 @@
       attest.hidden = !toggle.checked;
       attest.querySelector("input").required = toggle.checked;
     });
+  }
+  // 「爬取整站」未勾選時,隱藏頁數上限
+  var crawl = document.getElementById("crawl-toggle");
+  var mpField = document.getElementById("max-pages-field");
+  if (crawl && mpField) {
+    crawl.addEventListener("change", function () { mpField.hidden = !crawl.checked; });
   }
 </script>
 {% endblock %}

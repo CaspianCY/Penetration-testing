@@ -115,6 +115,11 @@ def start_scan():
     polite = request.form.get("polite", "on") == "on"
     active = request.form.get("active") == "on"
     aggressive = request.form.get("aggressive") == "on"
+    crawl = request.form.get("crawl", "on") == "on"
+    try:
+        max_pages = max(1, min(int(request.form.get("max_pages", 40)), 100))
+    except (TypeError, ValueError):
+        max_pages = 40
     # 主動測試需額外確認
     if active and request.form.get("active_attested") != "on":
         err = "啟用主動測試需另外確認你已獲授權對目標送出測試 payload。"
@@ -124,7 +129,8 @@ def start_scan():
     except AuthorizationError as exc:
         return render_template("index.html", jobs=manager.list_jobs(), error=str(exc)), 400
 
-    job = manager.start(scope, polite=polite, active=active, aggressive=aggressive)
+    job = manager.start(scope, polite=polite, active=active, aggressive=aggressive,
+                        crawl=crawl, max_pages=max_pages)
     return redirect(url_for("scan_view", job_id=job.id))
 
 

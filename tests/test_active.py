@@ -30,6 +30,7 @@ class FakeContext:
 
     target = "http://victim.test/"
     aggressive = False
+    crawl_result = None          # 未啟用整站爬取 → 走 single_page 後備
 
     def root(self):
         return FakeResp(INDEX)
