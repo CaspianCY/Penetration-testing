@@ -129,6 +129,33 @@ def index():
     return render_template("index.html", jobs=manager.list_jobs(), tools=_tools_summary())
 
 
+@app.route("/app")
+@app.route("/app/")
+def spa():
+    """新版 SPA(Vue 3,免 build)。與經典介面並存,驗證後再切換。"""
+    return render_template("app.html")
+
+
+@app.route("/api/tools")
+def api_tools():
+    return jsonify({"tools": _tools_summary()})
+
+
+@app.route("/api/scans")
+def api_scans():
+    rows = [{"id": j.id, "target": j.scope.target, "status": j.status,
+             "progress": j.progress} for j in manager.list_jobs()[:25]]
+    return jsonify({"scans": rows})
+
+
+@app.route("/api/learning")
+def api_learning():
+    try:
+        return jsonify(storage.learning_summary())
+    except Exception as exc:
+        return jsonify({"error": str(exc), "total": 0})
+
+
 @app.route("/dashboard")
 def dashboard():
     try:
@@ -251,8 +278,13 @@ def sast_view():
                          test_type="SAST", tester=tester)
         eng.log_action("白箱 SAST 原始碼分析(由網站上傳)")
         storage.save_engagement(eng, findings)
+        if "application/json" in request.headers.get("Accept", ""):
+            return jsonify({"engagement_id": eng.id,
+                            "url": url_for("engagement_view", eng_id=eng.id)})
         return redirect(url_for("engagement_view", eng_id=eng.id))
     except Exception as exc:
+        if "application/json" in request.headers.get("Accept", ""):
+            return jsonify({"error": f"分析失敗:{exc}"}), 500
         return render_template("sast.html", error=f"分析失敗:{exc}"), 500
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
@@ -311,7 +343,11 @@ def start_scan():
     api_endpoints = [ln.strip() for ln in request.form.get("api_endpoints", "").splitlines()
                      if ln.strip().lower().startswith(("http://", "https://"))]
 
+    wants_json = "application/json" in request.headers.get("Accept", "")
+
     def _err(msg):
+        if wants_json:
+            return jsonify({"error": msg}), 400
         return render_template("index.html", jobs=manager.list_jobs(),
                                tools=_tools_summary(), error=msg), 400
 
@@ -344,6 +380,8 @@ def start_scan():
                         login=login, capture=capture, resilience=resilience, proxy=proxy,
                         cookies=cookies, auth_headers=auth_headers, api_endpoints=api_endpoints,
                         browser=browser, ai_autotest=ai_autotest)
+    if wants_json:
+        return jsonify({"id": job.id, "url": url_for("scan_view", job_id=job.id)})
     return redirect(url_for("scan_view", job_id=job.id))
 
 
