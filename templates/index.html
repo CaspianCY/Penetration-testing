@@ -105,6 +105,14 @@
         <input type="text" id="auth_header" name="auth_header" autocomplete="off"
                placeholder="Bearer eyJhbGci...">
       </div>
+      <div class="field">
+        <label for="api_endpoints">要主動測試的 API 端點(每行一個,選用)</label>
+        <textarea id="api_endpoints" name="api_endpoints" rows="4" autocomplete="off"
+          style="width:100%;padding:.8rem .95rem;border:1.5px solid var(--border);border-radius:9px;background:#0b131d;color:var(--ink);font-family:var(--mono);font-size:.85rem"
+          placeholder="https://example.com/api/daily?period=202606&#10;https://example.com/api/income-breakdown?period=202606"></textarea>
+        <p class="hint">SPA 的真正攻擊面在它呼叫的 API(F12 → Network → 複製那些 <code>/api/…?參數</code> 的網址)。
+          帶參數的端點會被當成注入點做主動測試。<strong>需同時勾選『主動測試』。</strong></p>
+      </div>
     </fieldset>
 
     <label class="checkbox attest">

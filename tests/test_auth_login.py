@@ -163,6 +163,51 @@ def test_pasted_cookie_authenticates_scan():
     assert any(f.check_id == "auth-session-provided" for f in job.findings)
 
 
+def test_api_endpoints_become_injection_points():
+    """指定的 API 端點(帶 token)轉成注入點並被主動測試 → SPA 的真正攻擊面。"""
+    import time
+    from urllib.parse import parse_qs, urlparse
+
+    from pentest.authorization import ScopeRecord
+    from pentest.scanner import ScanManager
+
+    class H(BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def do_GET(self):
+            if self.headers.get("Authorization") != "Bearer tok123":
+                self.send_response(401)
+                self.end_headers()
+                self.wfile.write(b'{"error":"unauthorized"}')
+                return
+            q = parse_qs(urlparse(self.path).query)
+            period = q.get("period", [""])[0]
+            self.send_response(500 if "'" in period else 200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(b'{"error":"You have an error in your SQL syntax"}'
+                             if "'" in period else b'{"ok":1}')
+
+    srv = HTTPServer(("127.0.0.1", 0), H)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    base = f"http://127.0.0.1:{srv.server_port}"
+    scope = ScopeRecord(target=base + "/", host="127.0.0.1", authorized_by="self", attested=True)
+    job = ScanManager().start(
+        scope, polite=False, active=True, crawl=False,
+        auth_headers={"Authorization": "Bearer tok123"},
+        api_endpoints=[base + "/api/daily?period=202606", base + "/api/users/me"])
+    try:
+        for _ in range(150):
+            if job.status in ("done", "error"):
+                break
+            time.sleep(0.2)
+    finally:
+        srv.shutdown()
+    assert any(f.check_id == "active-sqli-period" for f in job.findings)   # API 參數測到 SQLi
+    assert any("API" in e["text"] for e in job.timeline)
+
+
 def test_crawl_reaches_pages_only_via_seed():
     """登入後的後台(未從首頁連出)需靠 seed 才爬得到 → 驗證已認證掃描的深入。"""
     class H(BaseHTTPRequestHandler):

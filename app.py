@@ -226,6 +226,10 @@ def start_scan():
     auth_header = request.form.get("auth_header", "").strip()
     auth_headers = {"Authorization": auth_header} if auth_header else {}
 
+    # SPA 的真正攻擊面:直接指定要主動測試的 API 端點(每行一個 URL)
+    api_endpoints = [ln.strip() for ln in request.form.get("api_endpoints", "").splitlines()
+                     if ln.strip().lower().startswith(("http://", "https://"))]
+
     def _err(msg):
         return render_template("index.html", jobs=manager.list_jobs(),
                                tools=_tools_summary(), error=msg), 400
@@ -245,6 +249,8 @@ def start_scan():
         return _err("啟用主動測試 / 深度掃描 / 登入韌性測試需另外確認你已獲授權對目標送出測試流量。")
     if resilience and login is None:
         return _err("登入韌性測試需要先填入登入網址與你自己的帳號/密碼。")
+    if api_endpoints and not active:
+        return _err("已指定 API 端點,但要對它們送出注入探測需同時勾選『主動測試』(並完成授權確認)。")
     try:
         scope = authorize(target, attested=attested)
     except AuthorizationError as exc:
@@ -253,7 +259,7 @@ def start_scan():
     job = manager.start(scope, polite=polite, active=active, aggressive=aggressive,
                         crawl=crawl, max_pages=max_pages, deep=deep,
                         login=login, capture=capture, resilience=resilience, proxy=proxy,
-                        cookies=cookies, auth_headers=auth_headers)
+                        cookies=cookies, auth_headers=auth_headers, api_endpoints=api_endpoints)
     return redirect(url_for("scan_view", job_id=job.id))
 
 
