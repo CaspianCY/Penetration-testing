@@ -138,3 +138,19 @@ def test_api_based_default_creds_when_login_api_present():
     finally:
         srv.shutdown()
     assert any(f.check_id == "defaultcreds-api" and f.severity == Severity.CRITICAL for f in res)
+
+
+def test_default_creds_skipped_when_credentials_provided():
+    """提供登入帳密 → 自動略過預設帳密測試(已認證掃描的合理取捨)。"""
+    from pentest.authorization import ScopeRecord
+    from pentest.auth_login import LoginSpec
+    from pentest.scanner import ScanManager
+
+    scope = ScopeRecord(target="http://127.0.0.1:9/", host="127.0.0.1",
+                        authorized_by="self", attested=True)
+    mgr = ScanManager()
+    with_creds = mgr.start(scope, active=True, crawl=False,
+                           login=LoginSpec(url="", username="u", password="p"))
+    without = mgr.start(scope, active=True, crawl=False)
+    # 有帳密少跑一項(預設帳密測試)
+    assert without.total_checks - with_creds.total_checks == 1
