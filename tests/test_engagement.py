@@ -70,6 +70,47 @@ def test_report_generation(tmp_path):
     assert "測試整合性與清理聲明" in joined
 
 
+def test_report_shows_authenticated_coverage_section(tmp_path):
+    """灰箱掃描:報告應有『測試覆蓋與已認證攻擊面』區塊,攤開前端/後端/登入後內部測了什麼。"""
+    import json
+    cov = {"authenticated": True, "pages": 6, "forms": 1, "points": 3, "api_count": 2,
+           "api_list": ["/api/daily", "/api/users/me"], "active": True,
+           "browser_used": True, "authz_tested": 2, "bac_hits": 1}
+    findings = [
+        enrich(Finding("authz-bac-api-daily", "缺少授權驗證:未登入即可存取內部 API — /api/daily",
+                       Severity.HIGH, "未帶 session 仍回資料。", "強制授權。"), "accesscontrol"),
+        Finding("scan-coverage", "測試覆蓋摘要", Severity.INFO,
+                json.dumps(cov, ensure_ascii=False), "—"),
+    ]
+    eng = Engagement(target="https://x/", name="t", methodology="grey-box",
+                     test_type="DAST", tester="s")
+    out = str(tmp_path / "r.docx")
+    docx_report.generate(eng, findings, out)
+    joined = "\n".join(p.text for p in Document(out).paragraphs)
+    assert "測試覆蓋與已認證攻擊面" in joined
+    assert "灰箱" in joined and "/api/daily" in joined
+    assert "缺少授權驗證" in joined                       # 登入後內部結論有呈現
+    # BAC finding 自身也在 A01 並會出現在 Findings 細節
+    assert any(f.owasp.startswith("A01") for f in findings if f.check_id.startswith("authz-bac-"))
+
+
+def test_report_honest_when_no_internal_api(tmp_path):
+    """已登入但沒探到內部 API → 報告誠實說明原因與補法,而非假裝測過。"""
+    import json
+    cov = {"authenticated": True, "pages": 2, "forms": 1, "points": 1, "api_count": 0,
+           "api_list": [], "active": True, "browser_used": False,
+           "authz_tested": 0, "bac_hits": 0}
+    findings = [Finding("scan-coverage", "測試覆蓋摘要", Severity.INFO,
+                        json.dumps(cov, ensure_ascii=False), "—")]
+    eng = Engagement(target="https://x/", name="t", methodology="grey-box",
+                     test_type="DAST", tester="s")
+    out = str(tmp_path / "r2.docx")
+    docx_report.generate(eng, findings, out)
+    joined = "\n".join(p.text for p in Document(out).paragraphs)
+    assert "未能探出可測的內部 API 端點" in joined
+    assert "瀏覽器動態爬取" in joined          # 給出補法
+
+
 def test_new_recurring_fixed_status(tmp_path):
     # 上次稽核有 a,b;這次有 b,c → b=recurring, c=new, a=fixed
     findings = [
