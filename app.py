@@ -281,6 +281,7 @@ def start_scan():
     capture = request.form.get("capture") == "on"
     resilience = request.form.get("resilience") == "on"
     browser = request.form.get("browser") == "on"
+    ai_autotest = request.form.get("ai_autotest") == "on"
     try:
         max_pages = max(1, min(int(request.form.get("max_pages", 40)), 100))
     except (TypeError, ValueError):
@@ -324,9 +325,11 @@ def start_scan():
         return _err("本平台已設定必須經由 Proxy / VPN 出口(SENTINEL_REQUIRE_PROXY),"
                     "請填入出口 Proxy 後再掃描,以避免使用本機 IP。")
 
-    # 主動測試 / 深度掃描 / 登入韌性測試皆會主動送出測試流量,需額外授權確認
-    if (active or deep or resilience) and request.form.get("active_attested") != "on":
-        return _err("啟用主動測試 / 深度掃描 / 登入韌性測試需另外確認你已獲授權對目標送出測試流量。")
+    # 主動測試 / 深度掃描 / 登入韌性測試 / AI 自動測試皆會主動送出測試流量,需額外授權確認
+    if (active or deep or resilience or ai_autotest) and request.form.get("active_attested") != "on":
+        return _err("啟用主動測試 / 深度掃描 / 登入韌性測試 / AI 自動測試需另外確認你已獲授權對目標送出測試流量。")
+    if ai_autotest and not active:
+        return _err("AI 閉環自動測試需同時勾選『主動測試』(它會自動送出偵測型探測)。")
     if resilience and login is None:
         return _err("登入韌性測試需要先填入登入網址與你自己的帳號/密碼。")
     if api_endpoints and not active:
@@ -340,7 +343,7 @@ def start_scan():
                         crawl=crawl, max_pages=max_pages, deep=deep,
                         login=login, capture=capture, resilience=resilience, proxy=proxy,
                         cookies=cookies, auth_headers=auth_headers, api_endpoints=api_endpoints,
-                        browser=browser)
+                        browser=browser, ai_autotest=ai_autotest)
     return redirect(url_for("scan_view", job_id=job.id))
 
 

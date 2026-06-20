@@ -60,6 +60,11 @@
         <span class="lt">深度掃描:呼叫業界真實工具<strong>(nmap / nuclei / ffuf / nikto / sqlmap)</strong>,
           依 PTES 階段編排,主控台即時輸出。</span>
       </label>
+      <label class="checkbox">
+        <input type="checkbox" name="ai_autotest">
+        <span class="lt">🤖 AI 閉環自動測試<span class="muted">(AI 看即時回應鎖定端點 → 平台<strong>自動送出探測</strong>。
+          雙層把關:白名單只放行<strong>偵測型</strong> payload、且只觀察回應不利用。需設 ANTHROPIC_API_KEY 才用真 AI)</span></span>
+      </label>
       {% if tools %}
       <p class="hint sub-hint">工具狀態:
         {% for name, ok in tools.items() %}<span class="tool-chip {{ 'on' if ok else 'off' }}">{{ name }}{{ ' ✓' if ok else ' ✕' }}</span>{% endfor %}
