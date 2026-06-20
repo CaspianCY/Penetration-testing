@@ -157,3 +157,32 @@ def test_build_context_and_print_report(tmp_path):
     assert ctx["coverage"]["api_count"] == 1
     assert any(f.check_id.startswith("authz-bac-") for f in ctx["coverage_bac"])
     assert "flow" in ctx and "owasp" in ctx and ctx["roadmap"]
+
+
+def test_report_checklist_and_tested_clean_matrix(tmp_path):
+    """測試項目清單 +『已測試,未發現』矩陣:讓 SQLi/上傳/後端等『測了沒漏洞』也看得見。"""
+    import json
+    cov = {"authenticated": True, "pages": 7, "forms": 2, "points": 2, "api_count": 3,
+           "api_list": ["/api/users"], "active": True, "browser_used": True,
+           "authz_tested": 3, "bac_hits": 0,
+           "owasp_tested": ["A01", "A03", "A05"],
+           "checklist": [
+               {"id": "active", "label": "主動弱點測試(注入 / XSS / 轉址)", "findings": 0, "ran": True},
+               {"id": "upload", "label": "檔案上傳攻擊面", "findings": 0, "ran": True},
+               {"id": "headers", "label": "安全回應標頭", "findings": 1, "ran": True}]}
+    findings = [
+        enrich(Finding("header-missing-csp", "缺少安全標頭:CSP", Severity.MEDIUM, "d", "r"), "header"),
+        Finding("scan-coverage", "測試覆蓋摘要", Severity.INFO, json.dumps(cov, ensure_ascii=False), "—"),
+    ]
+    eng = Engagement(target="https://x/", name="t", methodology="grey-box",
+                     test_type="DAST", tester="s")
+    ctx = docx_report.build_context(eng, findings)
+    assert "A03" in ctx["owasp_tested"] and len(ctx["checklist"]) == 3
+    out = str(tmp_path / "r.docx")
+    docx_report.generate(eng, findings, out)
+    joined = "\n".join(p.text for p in Document(out).paragraphs)
+    assert "測試項目與覆蓋" in joined
+    # 矩陣應對「已測試但無 finding」標示「已測試,未發現」,對未測類別標「未涵蓋」
+    cells = [c.text for tb in Document(out).tables for r in tb.rows for c in r.cells]
+    assert any("已測試,未發現" in x for x in cells)
+    assert any("未涵蓋" in x for x in cells)

@@ -144,6 +144,21 @@
   {% endif %}
   {% endif %}
 
+  <!-- 測試項目與覆蓋 -->
+  {% if ctx.checklist %}
+  <h2>測試項目與覆蓋</h2>
+  <p class="muted">下表列出本次實際執行的每一項測試與結果。即使「未發現問題」也代表已測試過,讓讀者清楚知道測試範圍(含後端 API、檔案上傳、資料庫注入等)。</p>
+  <table>
+    <tr><th>測試項目</th><th>結果</th></tr>
+    {% for item in ctx.checklist %}
+    <tr>
+      <td>{{ item.label or item.id }}</td>
+      <td>{% if not item.ran %}⚠ 未完成(執行失敗){% elif item.findings %}<span class="sev sev-medium">發現 {{ item.findings }} 項</span>{% else %}<span class="reached-yes">✓ 已執行,未發現問題</span>{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+
   <!-- OWASP 矩陣 -->
   <h2>OWASP Top 10 (2021) 覆蓋率矩陣</h2>
   <table>
@@ -152,7 +167,7 @@
     <tr>
       <td>{{ code }}</td><td>{{ name }}</td>
       <td>{{ ctx.owasp[code] | length }}</td>
-      <td>{{ '✓ 已涵蓋' if ctx.owasp[code] else '—' }}</td>
+      <td>{% if ctx.owasp[code] %}✓ 已涵蓋{% elif code in ctx.owasp_tested %}🔎 已測試,未發現{% else %}— 未涵蓋{% endif %}</td>
     </tr>
     {% endfor %}
   </table>
