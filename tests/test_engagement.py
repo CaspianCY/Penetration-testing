@@ -134,3 +134,26 @@ def test_cleanup_attestation_no_artifacts():
     report = eng.cleanup_report()
     assert report["persistent_changes"] is False
     assert "反鑑識" in report["note"]
+
+
+def test_build_context_and_print_report(tmp_path):
+    """build_context 彙整資料 + 列印報告渲染器(與 .docx 同源)。"""
+    import json
+    from pentest import docx_report
+    cov = {"authenticated": True, "pages": 5, "forms": 1, "points": 2, "api_count": 1,
+           "api_list": ["/api/daily"], "active": True, "browser_used": True,
+           "authz_tested": 1, "bac_hits": 1}
+    findings = [
+        enrich(Finding("authz-bac-api-daily", "缺少授權驗證 — /api/daily", Severity.HIGH,
+                       "未帶 session 仍回資料。", "強制授權。"), "accesscontrol"),
+        Finding("scan-coverage", "測試覆蓋摘要", Severity.INFO,
+                json.dumps(cov, ensure_ascii=False), "—"),
+    ]
+    eng = Engagement(target="https://x/", name="t", methodology="grey-box",
+                     test_type="DAST", tester="s")
+    ctx = docx_report.build_context(eng, findings)
+    assert ctx["method_label"] == "灰箱"
+    assert ctx["counts"][Severity.HIGH] == 1
+    assert ctx["coverage"]["api_count"] == 1
+    assert any(f.check_id.startswith("authz-bac-") for f in ctx["coverage_bac"])
+    assert "flow" in ctx and "owasp" in ctx and ctx["roadmap"]

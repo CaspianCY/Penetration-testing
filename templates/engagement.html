@@ -9,7 +9,10 @@
 <section class="card">
   <div class="detail-head">
     <h2>{{ e.name }}</h2>
-    <a class="btn-link" href="{{ url_for('engagement_report', eng_id=e.id) }}">⬇ 下載 .docx 報告</a>
+    <span>
+      <a class="btn-link" href="{{ url_for('engagement_report', eng_id=e.id) }}">⬇ 下載 .docx 報告</a>
+      <a class="btn-link" href="{{ url_for('engagement_report_html', eng_id=e.id) }}" target="_blank">🖨️ PDF 報告(列印頁)</a>
+    </span>
   </div>
   <table class="data-table meta">
     <tr><th>案件代號</th><td>{{ e.id }}</td></tr>

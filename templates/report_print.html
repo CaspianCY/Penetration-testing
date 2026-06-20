@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>滲透測試報告書 — {{ ctx.eng.name }}</title>
+<style>
+  :root { --c:#7c1d1d; --h:#b91c1c; --m:#b45309; --l:#1d4ed8; --i:#475569; --ink:#1a2230; --mut:#5b6b7f; --bd:#d7deea; }
+  * { box-sizing: border-box; }
+  body { font-family: "Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+    color: var(--ink); line-height: 1.7; margin: 0; background: #eef1f6; }
+  .sheet { max-width: 820px; margin: 1.5rem auto; background: #fff; padding: 3rem 3.2rem;
+    box-shadow: 0 2px 16px rgba(0,0,0,.12); }
+  h1 { font-size: 1.9rem; margin: 0 0 .3rem; }
+  h2 { font-size: 1.25rem; margin: 2rem 0 .7rem; padding-bottom: .35rem; border-bottom: 2px solid var(--bd);
+    page-break-after: avoid; }
+  h3 { font-size: 1.02rem; margin: 1.2rem 0 .4rem; page-break-after: avoid; }
+  .cover-meta { color: var(--mut); margin: .15rem 0; }
+  .conf { color: var(--h); font-weight: 700; margin-top: .8rem; }
+  table { width: 100%; border-collapse: collapse; margin: .6rem 0; font-size: .92rem; }
+  th, td { border: 1px solid var(--bd); padding: .45rem .6rem; text-align: left; vertical-align: top; }
+  th { background: #f4f6fb; color: #33415c; font-weight: 700; }
+  .kv th { width: 30%; white-space: nowrap; }
+  .sev { display: inline-block; padding: .08rem .5rem; border-radius: 4px; color: #fff; font-weight: 700; font-size: .82rem; }
+  .sev-critical { background: var(--c); } .sev-high { background: var(--h); }
+  .sev-medium { background: var(--m); } .sev-low { background: var(--l); } .sev-info { background: var(--i); }
+  .muted { color: var(--mut); }
+  .summary-box { background: #f8fafc; border: 1px solid var(--bd); border-left: 5px solid var(--h); padding: .8rem 1rem; border-radius: 6px; }
+  .finding { border: 1px solid var(--bd); border-left-width: 5px; border-radius: 6px; padding: .9rem 1.1rem; margin: 1rem 0; page-break-inside: avoid; }
+  .finding h3 { margin-top: 0; }
+  .finding pre { background: #f4f6fb; border: 1px solid var(--bd); padding: .55rem .7rem; border-radius: 5px;
+    white-space: pre-wrap; word-break: break-word; font-size: .82rem; }
+  .label { font-weight: 700; color: #33415c; margin-top: .5rem; }
+  ul, ol { margin: .3rem 0 .3rem 1.2rem; }
+  .reached-yes { color: #166534; font-weight: 700; } .reached-no { color: var(--mut); }
+  .toolbar { position: sticky; top: 0; background: #0e1622; color: #cfe; padding: .6rem 1rem; text-align: center; }
+  .toolbar button { background: #2ee6a6; color: #04130d; border: 0; font-weight: 700; padding: .5rem 1.1rem;
+    border-radius: 6px; cursor: pointer; font-size: .95rem; }
+  .pill { display: inline-block; background: #eef2fb; border: 1px solid var(--bd); border-radius: 999px;
+    padding: .1rem .55rem; font-size: .8rem; margin: .1rem; }
+  @media print {
+    body { background: #fff; }
+    .toolbar { display: none; }
+    .sheet { box-shadow: none; margin: 0; max-width: none; padding: 0; }
+    @page { margin: 1.6cm; }
+  }
+</style>
+</head>
+<body>
+<div class="toolbar">這是列印友善的報告頁 — 按下按鈕後在對話框選「另存為 PDF」即可匯出。
+  <button onclick="window.print()">🖨️ 列印 / 另存 PDF</button></div>
+<div class="sheet">
+
+  <!-- 封面 -->
+  <h1>滲透測試報告書</h1>
+  <div class="cover-meta">評估對象:{{ ctx.eng.name }}</div>
+  <div class="cover-meta">案件代號:{{ ctx.eng.id }}</div>
+  <div class="cover-meta">方法論:{{ ctx.method_label }} {{ ctx.eng.test_type }}</div>
+  <div class="cover-meta">依循標準:{{ ctx.eng.standards | join('、') }}</div>
+  <div class="cover-meta">報告日期:{{ ctx.date }}</div>
+  <div class="conf">{{ ctx.eng.confidentiality }}</div>
+
+  <!-- 文件管控 -->
+  <h2>文件管控</h2>
+  <table class="kv">
+    <tr><th>報告編號</th><td>{{ ctx.eng.id }}</td></tr>
+    <tr><th>評估對象</th><td>{{ ctx.eng.target }}</td></tr>
+    <tr><th>評估範圍</th><td>{{ ctx.eng.scope | join('、') or ctx.eng.target }}</td></tr>
+    <tr><th>評估方法</th><td>{{ ctx.method_label }} {{ ctx.eng.test_type }}</td></tr>
+    <tr><th>委託方</th><td>{{ ctx.eng.client or '—' }}</td></tr>
+    <tr><th>撰寫者</th><td>{{ ctx.eng.tester }}</td></tr>
+    <tr><th>報告日期</th><td>{{ ctx.date }}</td></tr>
+  </table>
+
+  <!-- 管理摘要 -->
+  <h2>管理摘要</h2>
+  <h3>整體風險評級</h3>
+  <p style="font-size:1.1rem;font-weight:700">{{ ctx.rating }}</p>
+  <div class="summary-box">{{ ctx.eng.name }} 目前存在 {{ ctx.counts['critical'] }} 個 Critical、{{ ctx.counts['high'] }} 個 High、{{ ctx.counts['medium'] }} 個 Medium 等級弱點。整體風險評級:{{ ctx.rating }}。強烈建議於 48 小時內修補 Critical、7 天內修補 High 項目。</div>
+
+  <h3>Findings 統計</h3>
+  <table>
+    <tr><th>嚴重度</th><th>數量</th><th>CVSS 範圍</th></tr>
+    {% for s in ctx.sev_order %}
+    <tr><td><span class="sev sev-{{ s }}">{{ ctx.sev_label[s] }}</span></td><td>{{ ctx.counts[s] }}</td><td>{{ ctx.sev_cvss_range[s] }}</td></tr>
+    {% endfor %}
+  </table>
+
+  <h3>最關鍵的風險(Top Findings)</h3>
+  {% if ctx.top_findings %}
+  <ul>
+    {% for f in ctx.top_findings %}
+    <li><span class="sev sev-{{ f.severity }}">{{ ctx.sev_label[f.severity] }}</span>
+      {{ f.title }}(CVSS {{ '%.1f'|format(f.cvss) if f.cvss else '—' }}, {{ f.owasp or '—' }}){% if f.location %} — {{ f.location }}{% endif %}</li>
+    {% endfor %}
+  </ul>
+  {% else %}<p>未發現 Critical / High 等級弱點。</p>{% endif %}
+
+  <!-- 攻擊路徑 -->
+  <h2>攻擊路徑與可達深度分析</h2>
+  <p class="muted">攻擊者理論上可達深度為「{{ ctx.flow.depth_label }}」({{ ctx.flow.reached_count }}/{{ ctx.flow.total_stages }} 階段)。此為依弱點推導的理論可達性,非實際入侵。</p>
+  {% if ctx.flow.blocked_summary %}
+  <p><strong>{{ '🎯 ' if ctx.flow.fully_breached else '🧱 ' }}{{ ctx.flow.blocked_summary }}</strong></p>
+  <p class="muted">{{ ctx.flow.blocked_detail }}</p>
+  {% endif %}
+  <table>
+    <tr><th>階段</th><th>是否觸及</th><th>說明 / 為什麼卡住</th></tr>
+    {% for s in ctx.flow.stages %}
+    <tr>
+      <td>{{ s.label }}{{ ' ◀ 打到這裡' if s.is_deepest else '' }}</td>
+      <td>{% if s.reached %}<span class="reached-yes">✓ 已觸及</span>{% else %}<span class="reached-no">✗ 未觸及</span>{% endif %}</td>
+      <td>{% if s.reached %}{{ s.findings | map(attribute='title') | join('、') or '此階段成立' }}{% else %}{% if s.block %}打不進來:{{ s.block.reason }}。{{ s.block.detail }}{% else %}未觸及。{% endif %}{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <!-- 測試覆蓋與已認證攻擊面 -->
+  {% if ctx.coverage %}
+  <h2>測試覆蓋與已認證攻擊面</h2>
+  <p class="muted">本節說明本次掃描實際涵蓋的攻擊面——前端頁面 / 表單與後端 API,以及「登入後內部」是否經過測試。</p>
+  <p><strong>認證狀態:</strong>
+    {% if ctx.coverage.authenticated %}灰箱 — 已使用提供的帳密成功登入並驗證工作階段,後續檢查皆在已登入狀態進行。
+    {% else %}黑箱 — 未提供登入帳密,僅涵蓋公開(未登入)面。{% endif %}</p>
+  <table class="kv">
+    <tr><th>前端頁面(已涵蓋)</th><td>{{ ctx.coverage.pages }}</td></tr>
+    <tr><th>前端表單</th><td>{{ ctx.coverage.forms }}</td></tr>
+    <tr><th>可注入輸入點</th><td>{{ ctx.coverage.points }}</td></tr>
+    <tr><th>後端 API 端點(探出)</th><td>{{ ctx.coverage.api_count }}</td></tr>
+    <tr><th>主動測試</th><td>{{ '已啟用' if ctx.coverage.active else '未啟用(僅被動)' }}</td></tr>
+    <tr><th>瀏覽器動態爬取</th><td>{{ '已使用' if ctx.coverage.browser_used else '未使用' }}</td></tr>
+    <tr><th>登入後存取控制測試</th><td>{{ ctx.coverage.authz_tested }} 個 API 端點{% if ctx.coverage.bac_hits %},其中 {{ ctx.coverage.bac_hits }} 個缺少授權{% endif %}</td></tr>
+  </table>
+  {% if ctx.coverage.api_list %}
+  <div class="label">探出並納入測試的後端 API 端點:</div>
+  <div>{% for u in ctx.coverage.api_list %}<span class="pill">{{ u }}</span>{% endfor %}</div>
+  {% endif %}
+  {% if ctx.coverage_bac %}
+  <p style="color:var(--c);font-weight:700">⚠️ 登入後內部:發現 {{ ctx.coverage_bac|length }} 個內部 API 缺少授權驗證,未認證即可取得後台資料(詳見 Findings 細節)。</p>
+  {% elif ctx.coverage_enforced %}
+  <p><strong>登入後內部:已對探出的內部 API 進行存取控制測試。</strong> {{ ctx.coverage_enforced[0].description }}</p>
+  {% elif ctx.coverage_no_api or (ctx.coverage.authenticated and ctx.coverage.api_count == 0) %}
+  <p style="color:var(--m);font-weight:700">登入後內部:本次未能探出可測的內部 API 端點,因此尚未涵蓋登入後的後端授權測試。</p>
+  <p class="muted">原因通常是前端為 JS 應用、API 在執行期才由 JavaScript 動態組出。建議啟用「瀏覽器動態爬取」或手動指定 API 端點後重掃。</p>
+  {% endif %}
+  {% endif %}
+
+  <!-- OWASP 矩陣 -->
+  <h2>OWASP Top 10 (2021) 覆蓋率矩陣</h2>
+  <table>
+    <tr><th>#</th><th>類別</th><th>相關 Findings 數</th><th>狀態</th></tr>
+    {% for code, name in ctx.owasp_names.items() %}
+    <tr>
+      <td>{{ code }}</td><td>{{ name }}</td>
+      <td>{{ ctx.owasp[code] | length }}</td>
+      <td>{{ '✓ 已涵蓋' if ctx.owasp[code] else '—' }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <!-- Findings 細節 -->
+  <h2>Findings 細節</h2>
+  {% if not ctx.findings_detail %}<p>未發現非資訊級弱點。</p>{% endif %}
+  {% for f in ctx.findings_detail %}
+  <div class="finding" style="border-left-color:var(--{{ f.severity[0] }})">
+    <h3><span class="sev sev-{{ f.severity }}">{{ ctx.sev_label[f.severity] }}</span> {{ f.title }}</h3>
+    <table class="kv">
+      <tr><th>OWASP</th><td>{{ f.owasp or '—' }}</td><th>CWE</th><td>{{ f.cwe or '—' }}</td></tr>
+      <tr><th>CVSS 3.1</th><td>{{ '%.1f'|format(f.cvss) if f.cvss else '—' }}</td><th>向量</th><td>{{ f.cvss_vector or '—' }}</td></tr>
+      <tr><th>MITRE ATT&CK</th><td>{{ f.attack or '—' }}</td><th>Confidence</th><td>{{ f.confidence or '—' }}</td></tr>
+      <tr><th>WSTG</th><td>{{ f.wstg or '—' }}</td><th>PTES 階段</th><td>{{ f.ptes_phase or '—' }}</td></tr>
+      <tr><th>工具</th><td>{{ f.tool or '—' }}</td><th>位置</th><td>{{ f.location or '—' }}</td></tr>
+    </table>
+    <div class="label">分析說明</div><div>{{ f.description }}</div>
+    {% if f.evidence %}<div class="label">證據</div><pre>{{ f.evidence }}</pre>{% endif %}
+    {% if f.poc %}<div class="label">PoC(概念驗證,無害)</div><pre>{{ f.poc }}</pre>{% endif %}
+    <div class="label">修補建議</div><div>{{ f.remediation }}</div>
+  </div>
+  {% endfor %}
+
+  <!-- 修補路線圖 -->
+  <h2>修補路線圖</h2>
+  {% for label, items in ctx.roadmap %}
+  <h3>{{ label }}({{ items|length }} 項)</h3>
+  <ul>{% for f in items %}<li>{{ f.title }} — {{ f.remediation }}</li>{% endfor %}</ul>
+  {% endfor %}
+
+  <!-- 聲明 -->
+  <h2>測試整合性與清理聲明</h2>
+  <p>本次測試未在目標系統建立持久產物,無需清理。本平台不執行竄改目標稽核日誌 / 反鑑識等行為。</p>
+  <h2>機密聲明</h2>
+  <p class="muted">本報告含機密資訊,分送對象僅限授權人員。撰寫:{{ ctx.eng.tester }}。方法論:{{ ctx.method_label }} {{ ctx.eng.test_type }}。報告日期:{{ ctx.date }}。</p>
+</div>
+</body>
+</html>

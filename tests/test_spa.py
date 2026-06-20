@@ -102,3 +102,25 @@ def test_sast_json_branch_requires_attest(monkeypatch, tmp_path):
     r = client.post("/sast", data={"source_code": "x = 1"},
                     headers={"Accept": "application/json"})
     assert r.status_code == 400
+
+
+def test_scan_print_and_docx_report_routes(monkeypatch, tmp_path):
+    """掃描層級的列印(PDF)與 .docx 報告路由皆可用(修掉 SPA 先前 docx 連結 404)。"""
+    app_mod = _fresh_app(monkeypatch, tmp_path)
+    from pentest.authorization import ScopeRecord
+    from pentest.checks.base import Finding, Severity
+    from pentest.scanner import ScanJob
+    scope = ScopeRecord(target="https://x/", host="x", authorized_by="self", attested=True)
+    job = ScanJob(id="rep1", scope=scope, polite=True, _cookies={"sid": "1"})
+    job.status = "done"
+    job.findings = [Finding("auth-password-equals-username", "密碼與帳號相同", Severity.CRITICAL, "d", "r")]
+    app_mod.manager._jobs["rep1"] = job
+    client = app_mod.app.test_client()
+
+    pr = client.get("/scan/rep1/report.print")
+    assert pr.status_code == 200 and "滲透測試報告書" in pr.get_data(as_text=True)
+    assert "另存 PDF" in pr.get_data(as_text=True)        # 列印頁含匯出引導
+
+    dx = client.get("/scan/rep1/report.docx")
+    assert dx.status_code == 200
+    assert "wordprocessingml" in dx.content_type

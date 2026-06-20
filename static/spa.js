@@ -421,6 +421,7 @@ const ScanView = {
 
       <section class="card">
         <a class="btn ghost" :href="'/scan/'+snap.id+'/report.docx'">⬇️ 下載 Word 報告</a>
+        <a class="btn ghost" :href="'/scan/'+snap.id+'/report.print'" target="_blank" style="margin-left:.5rem">🖨️ PDF 報告(列印頁)</a>
         <a class="btn ghost" :href="'/scan/'+snap.id" style="margin-left:.5rem">經典檢視</a>
       </section>
     </template>

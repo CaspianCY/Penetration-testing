@@ -203,22 +203,41 @@ def engagement_view(eng_id: str):
     return render_template("engagement.html", e=e, flow=flow)
 
 
-@app.route("/engagements/<eng_id>/report.docx")
-def engagement_report(eng_id: str):
-    import tempfile
-
-    from pentest import docx_report
+def _load_engagement_findings(eng_id: str):
+    """從儲存載入案件並還原 Engagement + Finding 物件(報告產出共用)。"""
     from pentest.checks.base import Finding
     from pentest.engagement import Engagement
-
     e = storage.load_engagement(eng_id)
     if not e:
-        abort(404)
+        return None, None
     eng = Engagement(
         target=e["target"], name=e["name"], methodology=e["methodology"],
         test_type=e["test_type"], tester=e["tester"], id=e["id"], created_at=e["created_at"],
     )
     findings = [Finding(**f) for f in e["findings"]]
+    return eng, findings
+
+
+@app.route("/engagements/<eng_id>/report.html")
+def engagement_report_html(eng_id: str):
+    """列印友善的 HTML 報告(瀏覽器 Ctrl/Cmd+P → 另存 PDF),內容與 .docx 同源。"""
+    from pentest import docx_report
+    eng, findings = _load_engagement_findings(eng_id)
+    if eng is None:
+        abort(404)
+    ctx = docx_report.build_context(eng, findings)
+    return render_template("report_print.html", ctx=ctx)
+
+
+@app.route("/engagements/<eng_id>/report.docx")
+def engagement_report(eng_id: str):
+    import tempfile
+
+    from pentest import docx_report
+
+    eng, findings = _load_engagement_findings(eng_id)
+    if eng is None:
+        abort(404)
     tmp = tempfile.NamedTemporaryFile(suffix=".docx", delete=False)
     tmp.close()
     docx_report.generate(eng, findings, tmp.name)
@@ -441,6 +460,19 @@ def api_scan_adaptive(job_id: str):
     return jsonify(result)
 
 
+def _engagement_from_job(job):
+    """從掃描任務即時組出 Engagement(不持久化),供直接產出專業報告。"""
+    from pentest.engagement import Engagement
+    authenticated = bool(getattr(job, "_login", None) or getattr(job, "_cookies", None)
+                         or getattr(job, "_auth_headers", None))
+    eng = Engagement(
+        target=job.scope.target, name=f"{job.scope.target} 滲透測試",
+        methodology="grey-box" if authenticated else "black-box",
+        test_type="DAST", tester="Sentinel 平台", scope=[job.scope.target],
+    )
+    return eng, list(job.findings)
+
+
 @app.route("/scan/<job_id>/report.<fmt>")
 def download_report(job_id: str, fmt: str):
     job = manager.get(job_id)
@@ -452,6 +484,21 @@ def download_report(job_id: str, fmt: str):
         return Response(report.to_markdown(job), mimetype="text/markdown")
     if fmt == "html":
         return Response(report.to_html(job), mimetype="text/html")
+    if fmt in ("print", "pdf"):           # 列印友善的專業報告(瀏覽器另存 PDF),與 .docx 同源
+        from pentest import docx_report
+        eng, findings = _engagement_from_job(job)
+        return render_template("report_print.html", ctx=docx_report.build_context(eng, findings))
+    if fmt == "docx":
+        import tempfile
+
+        from pentest import docx_report
+        eng, findings = _engagement_from_job(job)
+        tmp = tempfile.NamedTemporaryFile(suffix=".docx", delete=False)
+        tmp.close()
+        docx_report.generate(eng, findings, tmp.name)
+        return send_file(
+            tmp.name, as_attachment=True, download_name=f"{job_id}.docx",
+            mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
     abort(404)
 
 
