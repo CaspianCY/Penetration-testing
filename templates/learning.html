@@ -12,6 +12,7 @@
     <div class="stat-card"><div class="stat-num">{{ data.stacks|length }}</div><div class="stat-cap">學過的技術棧</div></div>
     <div class="stat-card"><div class="stat-num">{{ data.login_profiles|length }}</div><div class="stat-cap">登入剖析</div></div>
     <div class="stat-card"><div class="stat-num">{{ data.stack_findings|length }}</div><div class="stat-cap">技術棧→弱點型態</div></div>
+    <div class="stat-card"><div class="stat-num">{{ data.effective_payloads|length }}</div><div class="stat-cap">命中過的 payload</div></div>
   </div>
 </section>
 
@@ -49,6 +50,25 @@
   </table>
   {% else %}
   <p class="empty">尚未累積弱點傾向。多掃幾個目標後,平台就能歸納「這種技術棧常見哪些弱點」。</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>閉環學習:命中過的偵測 payload(技術棧 → 有效 payload)</h2>
+  <p class="hint">AI 閉環自動測試命中後,把「真的奏效的偵測型 payload」寫回這裡;
+    下次對<strong>同類技術棧</strong>會自動優先重試,形成完整學習迴路(只記偵測型,經白名單把關)。</p>
+  {% if data.effective_payloads %}
+  <table class="data-table">
+    <thead><tr><th>技術棧</th><th>型態</th><th>payload</th><th>命中次數</th></tr></thead>
+    <tbody>
+      {% for p in data.effective_payloads %}
+      <tr><td><code>{{ p.key }}</code></td><td>{{ p.value.kind }}</td>
+        <td><code>{{ p.value.payload }}</code></td><td>{{ p.success }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty">尚未學到有效 payload。對授權目標跑一次「AI 閉環自動測試」並命中後,這裡就會記住奏效的偵測 payload。</p>
   {% endif %}
 </section>
 {% endblock %}

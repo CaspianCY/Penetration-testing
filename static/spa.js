@@ -468,6 +468,7 @@ const Learning = {
           <div class="stat"><div class="n">{{ data.total || 0 }}</div><div class="c">學習筆數</div></div>
           <div class="stat"><div class="n">{{ (data.stacks||[]).length }}</div><div class="c">已知技術棧</div></div>
           <div class="stat"><div class="n">{{ (data.login_profiles||[]).length }}</div><div class="c">登入剖析</div></div>
+          <div class="stat"><div class="n">{{ (data.effective_payloads||[]).length }}</div><div class="c">有效 payload</div></div>
         </div>
         <div v-if="(data.stacks||[]).length" class="pills" style="margin-top:1rem">
           <span v-for="s in data.stacks" :key="s" class="tag">{{ s }}</span>
@@ -481,6 +482,21 @@ const Learning = {
         <tbody>
           <tr v-for="(p,i) in data.login_profiles" :key="i">
             <td><code>{{ p.key }}</code></td><td>{{ p.success }}</td><td>{{ p.fail }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+    <section v-if="data && (data.effective_payloads||[]).length" class="card">
+      <h2>閉環學習:命中過的偵測 payload</h2>
+      <p class="hint">AI 閉環自動測試命中後寫回;下次對同類技術棧會優先重試這些 payload。</p>
+      <table class="table">
+        <thead><tr><th>技術棧</th><th>型態</th><th>payload</th><th>命中次數</th></tr></thead>
+        <tbody>
+          <tr v-for="(p,i) in data.effective_payloads" :key="i">
+            <td><code>{{ p.key }}</code></td>
+            <td><span class="tag">{{ (p.value||{}).kind }}</span></td>
+            <td><code>{{ (p.value||{}).payload }}</code></td>
+            <td>{{ p.success }}</td>
           </tr>
         </tbody>
       </table>
