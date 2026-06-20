@@ -71,7 +71,9 @@
 
     <fieldset class="active-box" style="border-color:#1c2a3a;background:rgba(56,189,248,.05)">
       <legend style="color:#38bdf8">🔐 灰箱:已認證掃描(選用)</legend>
-      <p class="hint sub-hint">填入<strong>你自己的</strong>帳密,平台會先登入再掃描登入後的頁面。密碼只用於登入、不會明文寫入紀錄。</p>
+      <p class="hint sub-hint">填入<strong>你自己的</strong>帳密,平台會先登入再掃描登入後的頁面。
+        <strong>帳號 / 密碼欄位由系統自動偵測,你不需要知道對方網站怎麼寫</strong>;密碼只用於登入、不會明文寫入紀錄。
+        <br>若目標是 SPA / JS 應用(自動登入會失敗),請<strong>跳過此區</strong>,改用下面的 Authorization 權杖 / Cookie。</p>
       <div class="field">
         <label for="login_url">登入頁網址</label>
         <input type="text" id="login_url" name="login_url" placeholder="https://example.com/login" autocomplete="off">
