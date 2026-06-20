@@ -4,6 +4,7 @@
 <section class="card" id="scan" data-job-id="{{ job.id }}">
   <h2>掃描儀表板</h2>
   <p class="muted">目標:<strong>{{ job.scope.target }}</strong> ｜ 任務 ID:{{ job.id }}</p>
+  <p class="muted" id="egress-line" hidden>🛰️ 出口:<span id="egress-proxy">—</span> ｜ 對外 IP:<span id="egress-ip">查詢中…</span></p>
 
   <div class="progress-wrap">
     <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>

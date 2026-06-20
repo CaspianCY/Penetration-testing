@@ -57,6 +57,19 @@ def _mask(url: str) -> str:
     return re.sub(r"://([^:/]+):([^@]+)@", r"://\1:***@", url or "")
 
 
+# 出口控管:設定 SENTINEL_REQUIRE_PROXY 後,沒有 Proxy/VPN 就不准掃描(避免用本機 IP)
+_REQUIRE_PROXY = os.environ.get("SENTINEL_REQUIRE_PROXY", "").lower() in ("1", "true", "yes", "on")
+
+
+def _resolve_proxy(form_val: str | None) -> str:
+    """決定出口 Proxy:表單欄位優先,否則用環境變數(部署層可設固定 VPN 出口)。"""
+    v = (form_val or "").strip()
+    if v:
+        return v
+    return (os.environ.get("SENTINEL_PROXY") or os.environ.get("HTTPS_PROXY")
+            or os.environ.get("ALL_PROXY") or "").strip()
+
+
 def _resolve_port() -> int:
     for key in ("PORT", "SENTINEL_PORT"):
         v = os.environ.get(key, "")
@@ -199,6 +212,16 @@ def start_scan():
         return render_template("index.html", jobs=manager.list_jobs(),
                                tools=_tools_summary(), error=msg), 400
 
+    # 出口控管:走指定的 Proxy / VPN 出口,而非平台本機 IP
+    proxy = _resolve_proxy(request.form.get("proxy"))
+    if proxy:
+        from pentest.netcfg import valid_proxy
+        if not valid_proxy(proxy):
+            return _err("Proxy 格式不支援,請以 http://、https:// 或 socks5:// 開頭。")
+    if _REQUIRE_PROXY and not proxy:
+        return _err("本平台已設定必須經由 Proxy / VPN 出口(SENTINEL_REQUIRE_PROXY),"
+                    "請填入出口 Proxy 後再掃描,以避免使用本機 IP。")
+
     # 主動測試 / 深度掃描 / 登入韌性測試皆會主動送出測試流量,需額外授權確認
     if (active or deep or resilience) and request.form.get("active_attested") != "on":
         return _err("啟用主動測試 / 深度掃描 / 登入韌性測試需另外確認你已獲授權對目標送出測試流量。")
@@ -211,7 +234,7 @@ def start_scan():
 
     job = manager.start(scope, polite=polite, active=active, aggressive=aggressive,
                         crawl=crawl, max_pages=max_pages, deep=deep,
-                        login=login, capture=capture, resilience=resilience)
+                        login=login, capture=capture, resilience=resilience, proxy=proxy)
     return redirect(url_for("scan_view", job_id=job.id))
 
 

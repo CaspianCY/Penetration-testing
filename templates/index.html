@@ -29,6 +29,15 @@
       <span class="lt">流量側錄<span class="muted">(記錄掃描器自己送出的請求 / 回應軌跡,作為報告證據;敏感值自動遮罩)</span></span>
     </label>
 
+    <div class="field">
+      <label for="proxy">出口 Proxy / VPN（選用）</label>
+      <input type="text" id="proxy" name="proxy" autocomplete="off"
+             placeholder="socks5://127.0.0.1:1080 或 http://user:pass@host:3128">
+      <p class="hint">掃描的 HTTP 流量會改從這個出口送出（來源 IP 控管，<strong>非匿名規避</strong>）；
+        留空則用平台本機出口。可在部署層用 <code>SENTINEL_PROXY</code> 設固定出口、
+        <code>SENTINEL_REQUIRE_PROXY=1</code> 強制不得用本機 IP。</p>
+    </div>
+
     <fieldset class="active-box">
       <legend>⚡ 主動測試(進階)</legend>
       <label class="checkbox">

@@ -1,5 +1,7 @@
 Flask>=3.0,<4.0
 requests>=2.31
+# SOCKS 出口 Proxy / VPN 支援(socks5://…)
+PySocks>=1.7
 anthropic>=0.40
 SQLAlchemy>=2.0
 # PostgreSQL 驅動(正式部署)。本機若只用 SQLite 可不裝。

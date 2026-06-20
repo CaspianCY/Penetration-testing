@@ -219,6 +219,14 @@
     el("current-check").textContent = data.current_check || (data.status === "done" ? "已完成" : "—");
     renderPhases(data.phase_steps);
     renderWar(data.war);
+    if (data.proxy) {
+      var eg = el("egress-line");
+      if (eg) {
+        eg.hidden = false;
+        el("egress-proxy").textContent = data.proxy;
+        el("egress-ip").textContent = data.egress_ip || "查詢中…";
+      }
+    }
     renderTimeline(data.timeline);
     renderTranscript(data.transcript);
     renderSummary(data.severity_counts);
