@@ -68,10 +68,13 @@ def engagements_list():
 
 @app.route("/engagements/<eng_id>")
 def engagement_view(eng_id: str):
+    from pentest import attackflow
+
     e = storage.load_engagement(eng_id)
     if not e:
         abort(404)
-    return render_template("engagement.html", e=e)
+    flow = attackflow.build(e["findings"])
+    return render_template("engagement.html", e=e, flow=flow)
 
 
 @app.route("/engagements/<eng_id>/report.docx")

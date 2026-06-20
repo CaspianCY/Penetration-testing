@@ -1,0 +1,33 @@
+{% set sev_initial = {'critical':'C','high':'H','medium':'M','low':'L','info':'I'} %}
+<p class="flow-depth-banner">
+  可達深度(理論):<strong>{{ flow.depth_label }}</strong>
+  <span class="muted">— 依偵測到的弱點推導,非實際入侵</span>
+</p>
+<div class="flow-steps">
+  {% for s in flow.stages %}
+  <div class="flow-step {{ 'on' if s.reached else 'off' }} {{ 'deep' if s.is_deepest else '' }}">
+    <div class="flow-step-head">
+      <span class="flow-step-icon">{{ s.icon }}</span>
+      <span class="flow-step-label">{{ s.label }}</span>
+      {% if s.is_deepest %}<span class="flow-here">← 打到這裡</span>{% endif %}
+    </div>
+    {% if s.findings %}
+    <ul class="flow-find">
+      {% for f in s.findings %}
+      <li><span class="mini sev-{{ f.severity }}">{{ sev_initial.get(f.severity, '?') }}</span> {{ f.title }}</li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="muted small">未發現此階段的問題</p>{% endif %}
+  </div>
+  {% endfor %}
+</div>
+
+{% if flow.chains %}
+<h3 class="flow-chain-title">可能的攻擊鏈</h3>
+{% for c in flow.chains %}
+<div class="chain" style="border-left-color: var(--{{ c.severity }})">
+  <strong>{{ c.name }}</strong>
+  <ol class="chain-steps">{% for st in c.steps %}<li>{{ st }}</li>{% endfor %}</ol>
+</div>
+{% endfor %}
+{% endif %}

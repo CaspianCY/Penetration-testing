@@ -64,6 +64,35 @@
     });
   }
 
+  var sevInitial = { critical: "C", high: "H", medium: "M", low: "L", info: "I" };
+
+  function renderFlow(flow) {
+    if (!flow) return;
+    var steps = flow.stages.map(function (s) {
+      var cls = "flow-step " + (s.reached ? "on" : "off") + (s.is_deepest ? " deep" : "");
+      var finds = s.findings.length
+        ? "<ul class='flow-find'>" + s.findings.map(function (f) {
+            return "<li><span class='mini sev-" + f.severity + "'>" +
+              (sevInitial[f.severity] || "?") + "</span> " + esc(f.title) + "</li>";
+          }).join("") + "</ul>"
+        : "<p class='muted small'>未發現此階段的問題</p>";
+      var here = s.is_deepest ? "<span class='flow-here'>← 打到這裡</span>" : "";
+      return "<div class='" + cls + "'><div class='flow-step-head'><span class='flow-step-icon'>" +
+        s.icon + "</span><span class='flow-step-label'>" + esc(s.label) + "</span>" + here +
+        "</div>" + finds + "</div>";
+    }).join("");
+    var chains = (flow.chains || []).map(function (c) {
+      return "<div class='chain' style='border-left-color:var(--" + c.severity + ")'><strong>" +
+        esc(c.name) + "</strong><ol class='chain-steps'>" +
+        c.steps.map(function (st) { return "<li>" + esc(st) + "</li>"; }).join("") + "</ol></div>";
+    }).join("");
+    var chainTitle = chains ? "<h3 class='flow-chain-title'>可能的攻擊鏈</h3>" : "";
+    document.getElementById("attack-flow").innerHTML =
+      "<p class='flow-depth-banner'>可達深度(理論):<strong>" + esc(flow.depth_label) +
+      "</strong> <span class='muted'>— 依偵測到的弱點推導,非實際入侵</span></p>" +
+      "<div class='flow-steps'>" + steps + "</div>" + chainTitle + chains;
+  }
+
   async function poll() {
     let data;
     try {
@@ -78,6 +107,7 @@
     el("current-check").textContent = data.current_check || "—";
     renderSummary(data.severity_counts);
     renderFindings(data.findings);
+    renderFlow(data.attack_flow);
     el("log").textContent = (data.log || []).join("\n");
 
     if (data.ai_summary) {

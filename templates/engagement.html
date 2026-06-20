@@ -26,7 +26,12 @@
 </section>
 
 <section class="card">
-  <h2>Findings</h2>
+  <h2>攻擊流程(打到哪)</h2>
+  {% include "_flow_full.html" with context %}
+</section>
+
+<section class="card">
+  <h2>Findings(弱掃到的問題)</h2>
   {% set shown = [] %}
   {% for f in e.findings if f.severity != 'info' %}
   {% set _ = shown.append(1) %}

@@ -1,0 +1,7 @@
+<div class="flow-mini" title="可達深度:{{ flow.depth_label }}">
+  {% for s in flow.stages %}
+  <span class="flow-dot {{ 'on' if s.reached else 'off' }} {{ 'deep' if s.is_deepest else '' }}">{{ s.icon }}</span>
+  {% if not loop.last %}<span class="flow-arrow {{ 'on' if flow.stages[loop.index].reached else '' }}">›</span>{% endif %}
+  {% endfor %}
+  <span class="flow-depth">打到:{{ flow.depth_label }}</span>
+</div>

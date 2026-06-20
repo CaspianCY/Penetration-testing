@@ -72,14 +72,16 @@
     <section class="card">
       <h2>近期掃描 <a class="see-all" href="{{ url_for('scans_list') }}">查看全部 →</a></h2>
       {% if d.recent_scans %}
-      <ul class="job-list">
+      <ul class="report-list">
         {% for s in d.recent_scans %}
         <li>
-          <a class="job-target" href="{{ url_for('scan_view', job_id=s.id) }}">{{ s.target }}</a>
-          <span class="badge badge-{{ s.status }}">{{ s.status }}</span>
-          {% if s.severity.critical %}<span class="mini sev-critical">C{{ s.severity.critical }}</span>{% endif %}
-          {% if s.severity.high %}<span class="mini sev-high">H{{ s.severity.high }}</span>{% endif %}
-          <span class="muted">{{ s.progress }}%</span>
+          <div class="report-top">
+            <a class="job-target" href="{{ url_for('scan_view', job_id=s.id) }}">{{ s.target }}</a>
+            <span class="badge badge-{{ s.status }}">{{ s.status }}</span>
+            {% if s.severity.critical %}<span class="mini sev-critical">C{{ s.severity.critical }}</span>{% endif %}
+            {% if s.severity.high %}<span class="mini sev-high">H{{ s.severity.high }}</span>{% endif %}
+          </div>
+          {% with flow=s.flow %}{% include "_flow_mini.html" %}{% endwith %}
         </li>
         {% endfor %}
       </ul>
@@ -89,14 +91,16 @@
     <section class="card">
       <h2>近期案件報告 <a class="see-all" href="{{ url_for('engagements_list') }}">查看全部 →</a></h2>
       {% if d.recent_engagements %}
-      <ul class="job-list">
+      <ul class="report-list">
         {% for e in d.recent_engagements %}
         <li>
-          <a class="job-target" href="{{ url_for('engagement_view', eng_id=e.id) }}">{{ e.name }}</a>
-          <span class="badge">{{ e.methodology }} · {{ e.test_type }}</span>
-          {% if e.severity.critical %}<span class="mini sev-critical">C{{ e.severity.critical }}</span>{% endif %}
-          {% if e.severity.high %}<span class="mini sev-high">H{{ e.severity.high }}</span>{% endif %}
-          <span class="muted">{{ e.findings }} 項</span>
+          <div class="report-top">
+            <a class="job-target" href="{{ url_for('engagement_view', eng_id=e.id) }}">{{ e.name }}</a>
+            <span class="badge">{{ e.methodology }} · {{ e.test_type }}</span>
+            {% if e.severity.critical %}<span class="mini sev-critical">C{{ e.severity.critical }}</span>{% endif %}
+            {% if e.severity.high %}<span class="mini sev-high">H{{ e.severity.high }}</span>{% endif %}
+          </div>
+          {% with flow=e.flow %}{% include "_flow_mini.html" %}{% endwith %}
         </li>
         {% endfor %}
       </ul>
