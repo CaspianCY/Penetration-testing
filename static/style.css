@@ -236,6 +236,14 @@ button:disabled { background: #94a3b8; cursor: not-allowed; }
 .flow-find { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: .3rem; }
 .flow-find li { font-size: .8rem; display: flex; gap: .35rem; align-items: flex-start; }
 
+.crawl-stats { display: flex; gap: .8rem; flex-wrap: wrap; margin-bottom: .6rem; }
+.cstat { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 999px;
+  padding: .3rem .9rem; font-size: .9rem; }
+.cstat b { color: var(--accent); font-size: 1.05rem; }
+.crawl-pages { columns: 2; margin: .5rem 0 0; padding-left: 1.2rem; font-size: .85rem; }
+.crawl-pages li { break-inside: avoid; }
+details summary { cursor: pointer; color: var(--accent); font-size: .9rem; }
+
 .flow-chain-title { font-size: 1rem; margin: 1.3rem 0 .6rem; }
 .chain { border: 1px solid var(--border); border-left-width: 5px; border-radius: 9px;
   padding: .7rem 1rem; margin: .6rem 0; background: #f8fafc; }

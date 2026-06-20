@@ -93,6 +93,32 @@
       "<div class='flow-steps'>" + steps + "</div>" + chainTitle + chains;
   }
 
+  function renderCrawl(data) {
+    var card = document.getElementById("crawl-card");
+    var box = document.getElementById("crawl-info");
+    var cs = data.crawl_summary;
+    if (cs && cs.page_count != null) {
+      var pages = (cs.pages || []).map(function (p) { return "<li>" + esc(p) + "</li>"; }).join("");
+      var map = pages
+        ? "<details><summary>站點地圖（" + cs.page_count + " 頁，點開查看）</summary>" +
+          "<ul class='crawl-pages'>" + pages + "</ul></details>"
+        : "";
+      box.innerHTML =
+        "<div class='crawl-stats'>" +
+        "<span class='cstat'><b>" + cs.page_count + "</b> 頁</span>" +
+        "<span class='cstat'><b>" + cs.form_count + "</b> 表單</span>" +
+        "<span class='cstat'><b>" + cs.point_count + "</b> 可注入端點</span></div>" + map;
+      card.hidden = false;
+      return;
+    }
+    // 後備:從「攻擊面盤點」finding 取(歷史/重啟後也看得到)
+    var surf = (data.findings || []).filter(function (f) { return f.check_id === "surface-coverage"; })[0];
+    if (surf) {
+      box.innerHTML = "<p>" + esc(surf.description) + "</p><p class='muted'>" + esc(surf.evidence) + "</p>";
+      card.hidden = false;
+    }
+  }
+
   async function poll() {
     let data;
     try {
@@ -106,6 +132,7 @@
     el("status").textContent = data.status;
     el("current-check").textContent = data.current_check || "—";
     renderSummary(data.severity_counts);
+    renderCrawl(data);
     renderFindings(data.findings);
     renderFlow(data.attack_flow);
     el("log").textContent = (data.log || []).join("\n");
