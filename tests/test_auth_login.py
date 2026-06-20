@@ -165,6 +165,51 @@ def test_discover_login_url_finds_common_path():
     assert found.endswith("/login")
 
 
+def test_json_api_login_tries_field_name_variants():
+    """端點存在但回 401(欄位名不符)→ 應輪流試其他欄位名(account)直到成功。"""
+    import json as _json
+
+    token = "tok_abcdef1234567890"
+
+    class H(BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def do_GET(self):
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html")
+            self.end_headers()
+            self.wfile.write(b"<html><body><div id='root'></div></body></html>")
+
+        def do_POST(self):
+            n = int(self.headers.get("Content-Length", 0))
+            try:
+                b = _json.loads(self.rfile.read(n) or b"{}")
+            except Exception:
+                b = {}
+            ok = self.path == "/auth/login" and b.get("account") == "u" and b.get("password") == "p"
+            if self.path == "/auth/login":
+                self.send_response(200 if ok else 401)        # 端點存在:成功 200 / 否則 401
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(_json.dumps({"token": token} if ok else {"e": 1}).encode())
+            else:
+                self.send_response(404)
+                self.end_headers()
+                self.wfile.write(b"{}")
+
+    srv = HTTPServer(("127.0.0.1", 0), H)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    base = f"http://127.0.0.1:{srv.server_port}"
+    try:
+        ctx = ScanContext(target=base + "/", polite=False)
+        ok, headers, _, _, tok, api = auth_login.discover_api_login(ctx, "u", "p")
+    finally:
+        srv.shutdown()
+    assert ok and headers["Authorization"] == f"Bearer {token}"   # account 欄位也成功
+    assert api.endswith("/auth/login")
+
+
 def test_extract_token_from_json():
     from pentest.auth_login import _extract_token
     assert _extract_token({"token": "abcdef1234567890"}) == "abcdef1234567890"
