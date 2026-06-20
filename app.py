@@ -28,8 +28,14 @@ app = Flask(__name__)
 
 # 正式部署請設定 DATABASE_URL 指向 PostgreSQL,例如:
 #   postgresql+psycopg://user:pass@localhost:5432/sentinel
-# 未設定時退回單檔 SQLite,方便本機開發。
-_DB_URL = os.environ.get("DATABASE_URL", "sqlite:///sentinel.db")
+#
+# 未設定時退回單檔 SQLite。注意:SQLite 檔是本機檔案,且被 .gitignore 忽略,
+# 在會被回收/重新 clone 的臨時環境(如雲端容器)中無法長期保存——要持久請用
+# PostgreSQL。預設路徑採「絕對路徑」(錨定在本檔所在目錄),避免從不同工作目錄
+# 啟動時各自產生不同的空白資料庫。
+_HERE = os.path.dirname(os.path.abspath(__file__))
+_DEFAULT_DB = "sqlite:///" + os.path.join(_HERE, "sentinel.db")
+_DB_URL = os.environ.get("DATABASE_URL", _DEFAULT_DB)
 storage = Storage(_DB_URL)
 manager = ScanManager(storage=storage)
 
@@ -167,7 +173,26 @@ def download_report(job_id: str, fmt: str):
     abort(404)
 
 
+def _startup_banner() -> None:
+    """印出資料庫位置與現有筆數,讓使用者一眼看出資料存到哪、是否讀到空 DB。"""
+    print(f"[Sentinel] 資料庫:{_DB_URL}")
+    if _DB_URL.startswith("sqlite"):
+        path = _DB_URL.replace("sqlite:///", "")
+        exists = os.path.exists(path)
+        print(f"[Sentinel] SQLite 檔:{path}（{'已存在' if exists else '將新建'}）")
+        if not os.environ.get("DATABASE_URL"):
+            print("[Sentinel] ⚠ 使用預設 SQLite。臨時環境(雲端容器)重啟會清空,"
+                  "要長期保存請設定 DATABASE_URL 指向 PostgreSQL。")
+    try:
+        dd = storage.dashboard_data()
+        print(f"[Sentinel] 現有資料:掃描 {dd['scans_total']} 筆、案件 {dd['engagements_total']} 筆、"
+              f"弱點 {dd['findings_total']} 項")
+    except Exception as exc:
+        print(f"[Sentinel] (無法讀取現有資料:{exc})")
+
+
 if __name__ == "__main__":
     host = os.environ.get("SENTINEL_HOST", "127.0.0.1")
     port = int(os.environ.get("SENTINEL_PORT", "5000"))
+    _startup_banner()
     app.run(host=host, port=port, debug=False)

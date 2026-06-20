@@ -97,9 +97,20 @@ python engage.py --name "My App" --sast ./src --dast https://staging.example.com
 ### 資料庫
 
 - 正式部署:設定 `DATABASE_URL` 為 PostgreSQL 連線字串(驅動用 `psycopg` v3)。
-- 本機/測試:不設定即使用 `sqlite:///sentinel.db`,免裝資料庫。
-- 資料表(SQLAlchemy 自動建立):`scans`、`findings`、`scope_records`。
+- 本機/測試:不設定即使用 `sentinel.db`(SQLite,絕對路徑錨定在專案目錄),免裝資料庫。
+- 資料表(SQLAlchemy 自動建立):`scans`、`findings`、`scope_records`、`engagements`。
 - AI 分析結果存於 `scans` 列(`ai_summary` / `ai_model` / `ai_generated_at`)。
+
+> ⚠️ **資料保存重要說明**
+> 預設的 SQLite 是**本機檔案**,且被 `.gitignore` 忽略(不會進版控)。在**會被回收或
+> 重新 clone 的臨時環境(雲端容器、CI、Claude Code web 等)**中,容器重啟後這個檔會
+> **消失**,先前的掃描/案件就不見了。
+>
+> 要**長期保存或多人共用**,請設定 `DATABASE_URL` 指向**外部 PostgreSQL**:
+> ```bash
+> export DATABASE_URL="postgresql+psycopg://user:pass@db-host:5432/sentinel"
+> ```
+> 啟動時 `python app.py` 會印出目前使用的資料庫與現有筆數,可據此確認資料是否讀到。
 
 ## 使用流程
 
