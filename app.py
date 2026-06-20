@@ -375,6 +375,22 @@ def api_scan_ai(job_id: str):
     return jsonify({"ai_summary": job.ai_summary})
 
 
+@app.route("/api/scan/<job_id>/adaptive", methods=["POST"])
+def api_scan_adaptive(job_id: str):
+    """LLM 適應性測試建議:看即時回應 → 動態建議下一步 + 針對性測試案例。"""
+    from pentest import ai_adaptive
+
+    job = manager.get(job_id)
+    if not job:
+        abort(404)
+    try:
+        result = ai_adaptive.analyze(job)
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+    result["model_name"] = ai_adaptive.model_name()
+    return jsonify(result)
+
+
 @app.route("/scan/<job_id>/report.<fmt>")
 def download_report(job_id: str, fmt: str):
     job = manager.get(job_id)

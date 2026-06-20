@@ -75,6 +75,53 @@
     });
   }
 
+  var adaptiveBound = false;
+  function bindAdaptive() {
+    if (adaptiveBound) return;
+    adaptiveBound = true;
+    var btn = el("adaptive-btn");
+    if (!btn) return;
+    btn.addEventListener("click", async () => {
+      btn.disabled = true;
+      var orig = btn.textContent;
+      btn.textContent = "🧠 思考中…";
+      try {
+        const data = await (await fetch(`/api/scan/${jobId}/adaptive`, { method: "POST" })).json();
+        if (data.error) { alert(data.error); return; }
+        renderAdaptive(data);
+      } catch (e) {
+        alert("適應性建議失敗:" + e);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = orig;
+      }
+    });
+  }
+
+  function renderAdaptive(d) {
+    function list(items) {
+      return "<ul>" + (items || []).map((x) => "<li>" + esc(x) + "</li>").join("") + "</ul>";
+    }
+    var cases = (d.test_cases || []).map(function (c) {
+      var pls = (c.payloads || []).map((p) => "<code>" + esc(p) + "</code>").join(" ");
+      return "<div class='chain' style='border-left-color:var(--accent)'>" +
+        "<strong>" + esc(c.endpoint || "") + "</strong> " +
+        (c.param ? "<span class='muted'>參數 " + esc(c.param) + "</span>" : "") +
+        "<div class='small' style='margin:.3rem 0'>技術:" + esc(c.technique || "") + "</div>" +
+        (pls ? "<div class='small'>候選 payload(偵測型):" + pls + "</div>" : "") +
+        (c.rationale ? "<div class='muted small' style='margin-top:.3rem'>" + esc(c.rationale) + "</div>" : "") +
+        "</div>";
+    }).join("");
+    el("adaptive-card").hidden = false;
+    el("adaptive-body").innerHTML =
+      "<p class='muted small'>來源:" + esc(d.model || d.model_name || "") + "</p>" +
+      (d.summary ? "<p>" + esc(d.summary) + "</p>" : "") +
+      (d.focus && d.focus.length ? "<h3 class='flow-chain-title'>聚焦方向</h3>" + list(d.focus) : "") +
+      (d.next_steps && d.next_steps.length ? "<h3 class='flow-chain-title'>建議下一步</h3>" + list(d.next_steps) : "") +
+      (cases ? "<h3 class='flow-chain-title'>針對性測試案例</h3>" + cases : "") +
+      (d.note ? "<p class='muted small'>" + esc(d.note) + "</p>" : "");
+  }
+
   var sevInitial = { critical: "C", high: "H", medium: "M", low: "L", info: "I" };
 
   function renderPhases(steps) {
@@ -253,5 +300,6 @@
     }
   }
 
+  bindAdaptive();
   poll();
 })();

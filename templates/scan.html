@@ -22,6 +22,7 @@
 
   <div class="actions">
     <button id="ai-btn" disabled>🤖 AI 分析與修補計畫</button>
+    <button id="adaptive-btn" class="btn-link">🧠 AI 適應性測試建議</button>
     <form method="post" action="{{ url_for('scan_to_engagement', job_id=job.id) }}" style="display:inline">
       <button type="submit" id="eng-btn" class="btn-link">📁 歸檔為案件並產生 .docx 報告</button>
     </form>
@@ -50,6 +51,11 @@
 <section class="card" id="ai-card" hidden>
   <h2>🤖 AI 分析與修補計畫</h2>
   <div id="ai-summary" class="ai"></div>
+</section>
+
+<section class="card" id="adaptive-card" hidden>
+  <h2>🧠 AI 適應性測試建議<span class="muted" style="font-size:.8rem"> — 依即時回應動態建議下一步與針對性測試案例</span></h2>
+  <div id="adaptive-body"></div>
 </section>
 
 <section class="card">
