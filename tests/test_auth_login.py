@@ -102,6 +102,23 @@ def test_capture_masks_sensitive_query_values():
     assert "secret" not in url and "xyz" not in url and "abc" not in url
 
 
+def test_weak_self_credential():
+    from pentest.auth_login import weak_self_credential
+
+    eq = weak_self_credential("mandy_tsai", "mandy_tsai")          # 密碼=帳號
+    assert eq and eq.severity == Severity.CRITICAL
+    assert eq.check_id == "auth-password-equals-username" and eq.cwe == "CWE-1392"
+
+    weak = weak_self_credential("admin", "123456")                # 常見弱密碼
+    assert weak and weak.severity == Severity.HIGH
+
+    short = weak_self_credential("u", "ab12")                     # 太短
+    assert short and short.severity == Severity.HIGH
+
+    assert weak_self_credential("alice", "Tr0ub4dor&3xyz") is None  # 夠強 → 無 finding
+    assert weak_self_credential("alice", "") is None               # 沒密碼 → 不誤報
+
+
 def test_diagnose_no_form_messages():
     from pentest.auth_login import _diagnose_no_form
 
