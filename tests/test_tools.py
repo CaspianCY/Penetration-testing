@@ -53,6 +53,35 @@ def test_nikto_parse_skips_headers_flags_sensitive():
     assert any(f.severity == Severity.MEDIUM for f in fs)   # admin / .git
 
 
+def test_nikto_parse_drops_tool_noise_and_dup_headers():
+    """回歸:工具狀態 / 錯誤 / 平台無害資訊 / 與原生標頭檢查重複者一律不應成為 finding。
+    先前報告被這類雜訊塞了十幾項 Low,嚴重稀釋專業度。"""
+    out = (
+        "+ ERROR: Failed to check for updates: 403\n"
+        "+ ERROR: Host maximum execution time of 90 seconds reached\n"
+        "+ 1 host(s) tested\n"
+        "+ No CGI Directories found (use '-C all' to force check all possible dirs). CGI tests skipped.\n"
+        "+ Platform:           Unknown\n"
+        "+ /: Uncommon header(s) 'x-zeabur-ip-country' found, with contents: JP.\n"
+        "+ /: An alt-svc header was found which is advertising HTTP/3.\n"
+        "+ /: Suggested security header missing: content-security-policy.\n"
+        "+ /: Suggested security header missing: strict-transport-security.\n"
+        "+ /: Retrieved x-powered-by header: Express.\n"
+        "+ OSVDB-3092: /admin/: This might be interesting.\n"
+    )
+    fs = nikto_tool.parse(out)
+    titles = " ".join(f.title for f in fs)
+    # 雜訊全數丟棄
+    for noise in ("Failed to check", "maximum execution", "host(s) tested", "CGI",
+                  "Platform:", "x-zeabur", "alt-svc", "Suggested security header"):
+        assert noise not in titles, noise
+    # 技術指紋(x-powered-by)降為 INFO,不灌進 Low
+    xpb = [f for f in fs if "x-powered-by" in f.title.lower()]
+    assert xpb and xpb[0].severity == Severity.INFO
+    # 真正的問題仍保留為 Medium
+    assert any(f.severity == Severity.MEDIUM and "admin" in f.title.lower() for f in fs)
+
+
 def test_ffuf_parse_flags_sensitive_paths():
     data = {"results": [
         {"input": {"FUZZ": "css"}, "status": 200, "url": "http://t/css"},

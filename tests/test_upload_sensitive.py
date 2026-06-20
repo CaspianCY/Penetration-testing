@@ -72,3 +72,31 @@ def test_sensitive_clean_response_no_findings():
     finally:
         srv.shutdown()
     assert res == []
+
+
+def test_ordinary_https_urls_not_flagged_as_connection_string():
+    """回歸:一般 https 連結(如 Google Fonts)不可被誤判為『含密碼的連線字串』。
+    先前過鬆的正則把 https://fonts.googleapis.com/... 後面碰巧的 ':' 與 '@font-face'
+    串成假的連線字串,產生 High 級誤報。"""
+    page = (b'<html><head>'
+            b'<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700">'
+            b'<style>@font-face{src:url(https://fonts.gstatic.com/s/a.woff2)}@media(min-width:2x){}</style>'
+            b'</head><body>contact a@b.com</body></html>')
+    srv = _serve(page)
+    try:
+        ctx = ScanContext(target=f"http://127.0.0.1:{srv.server_port}/", polite=False)
+        res = sensitive.run(ctx)
+    finally:
+        srv.shutdown()
+    assert not any("連線字串" in f.title for f in res)
+
+
+def test_real_db_connection_string_is_flagged():
+    srv = _serve(b'{"DATABASE_URL":"postgres://admin:s3cr3t@db.internal:5432/app"}')
+    try:
+        ctx = ScanContext(target=f"http://127.0.0.1:{srv.server_port}/", polite=False)
+        res = sensitive.run(ctx)
+    finally:
+        srv.shutdown()
+    assert any("連線字串" in f.title for f in res)
+    assert any(f.severity == Severity.HIGH for f in res)

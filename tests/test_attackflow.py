@@ -49,6 +49,15 @@ def test_info_only_yields_no_path():
     assert flow["reached_count"] == 0
 
 
+def test_weak_credential_reaches_exploitation():
+    """回歸:密碼=帳號 / 弱憑證(可直接登入)應計入『漏洞利用 / 取得進入點』,
+    不可再出現『有 Critical 卻卡在偵察』的矛盾。"""
+    flow = attackflow.build([_f("auth-password-equals-username", Severity.CRITICAL)])
+    reached = {s["key"]: s["reached"] for s in flow["stages"]}
+    assert reached["exploit"]                       # 取得進入點(初始存取)
+    assert flow["depth_key"] != "recon"             # 不再卡在偵察
+
+
 def test_chains_generated():
     flow = attackflow.build([
         _f("sast-sqli-x", Severity.CRITICAL),
