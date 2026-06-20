@@ -98,3 +98,43 @@ def test_default_creds_drives_attack_flow_to_exploit():
     assert reached["exploit"] and reached["impact"]      # 預設帳密 = 直接打進來
     names = " ".join(c["name"] for c in flow["chains"])
     assert "預設帳密" in names
+
+
+def test_api_based_default_creds_when_login_api_present():
+    """有登入 API 時,預設帳密改打真正的 API(不打沒作用的 JS 表單)。"""
+    import json as _json
+    import threading
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+
+    from pentest.checks.base import ScanContext
+
+    class H(BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def do_POST(self):
+            n = int(self.headers.get("Content-Length", 0))
+            try:
+                b = _json.loads(self.rfile.read(n) or b"{}")
+            except Exception:
+                b = {}
+            if (b.get("username") or b.get("account")) == "admin" and b.get("password") == "admin":
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(b'{"token":"tok1234567890abc"}')
+            else:
+                self.send_response(401)
+                self.end_headers()
+                self.wfile.write(b"{}")
+
+    srv = HTTPServer(("127.0.0.1", 0), H)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    base = f"http://127.0.0.1:{srv.server_port}"
+    try:
+        ctx = ScanContext(target=base + "/", polite=False)
+        ctx.login_api_url = base + "/api/users/login"
+        res = default_creds.run(ctx)
+    finally:
+        srv.shutdown()
+    assert any(f.check_id == "defaultcreds-api" and f.severity == Severity.CRITICAL for f in res)
