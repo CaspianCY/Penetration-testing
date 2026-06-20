@@ -25,7 +25,7 @@ import os
 import sys
 
 from pentest import docx_report
-from pentest.checks import ACTIVE_CHECK, REGISTRY, ScanContext
+from pentest.checks import ACTIVE_CHECK, DEFAULT_CREDS_CHECK, REGISTRY, ScanContext
 from pentest.checks.base import Severity
 from pentest.engagement import Engagement
 from pentest.standards import enrich, kind_from_check_id
@@ -63,7 +63,7 @@ def run_dast(engagement: Engagement, url: str, *, active: bool, aggressive: bool
         emit=_console if deep else None,
     )
     findings = []
-    checks = list(REGISTRY) + ([ACTIVE_CHECK] if active else [])
+    checks = list(REGISTRY) + ([ACTIVE_CHECK, DEFAULT_CREDS_CHECK] if active else [])
     if deep:
         from pentest.tools import ADAPTERS
         checks += [(a.name, a.label, a) for a in ADAPTERS]
