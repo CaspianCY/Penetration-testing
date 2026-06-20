@@ -102,6 +102,41 @@ def test_capture_masks_sensitive_query_values():
     assert "secret" not in url and "xyz" not in url and "abc" not in url
 
 
+def test_js_driven_login_form_is_explained():
+    """表單在 HTML 但登入由 JS 處理(onsubmit)→ 失敗訊息要點出並引導改用 Token。"""
+    form = (b"<html><body><form id='loginForm' onsubmit='handleLogin(event)'>"
+            b"<input name='username' type='text'>"
+            b"<input name='password' type='password'></form></body></html>")
+
+    class H(BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def do_GET(self):
+            self._send(form)
+
+        def do_POST(self):                     # 原生 POST 不會登入 → 回登入頁
+            self._send(form)
+
+        def _send(self, body):
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html")
+            self.end_headers()
+            self.wfile.write(body)
+
+    srv = HTTPServer(("127.0.0.1", 0), H)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    base = f"http://127.0.0.1:{srv.server_port}"
+    try:
+        ctx = ScanContext(target=base + "/", polite=False)
+        ok, _, detail, _ = auth_login.establish_session(
+            ctx, LoginSpec(url=base + "/login.html", username="u", password="p"))
+    finally:
+        srv.shutdown()
+    assert not ok
+    assert "JavaScript" in detail and "Token" in detail
+
+
 def test_discover_login_url_finds_common_path():
     """只給首頁,系統自動找出含密碼欄位的登入頁。"""
     class H(BaseHTTPRequestHandler):
