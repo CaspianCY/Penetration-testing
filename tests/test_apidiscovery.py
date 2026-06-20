@@ -70,3 +70,43 @@ def test_no_js_no_endpoints():
         assert apidiscovery.run(ctx) == []
     finally:
         srv.shutdown()
+
+
+def test_discovers_html_pages_via_js_nav():
+    """多頁式 + JS 導覽:從 JS 探出 .html 頁面並抓取(含頁面註解裡的 API)。"""
+    class H(BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def do_GET(self):
+            if self.path == "/nav.js":
+                b = "const pages=['/performance.html','/factories.html'];"
+                ct = "application/javascript"
+            elif self.path.startswith("/performance.html"):
+                b = ("<html><body><!-- API: /api/stats/performance, /api/revenue-targets?period=1 -->"
+                     "<form action='/api/upload' method='post'><input name='file' type='file'></form>"
+                     "</body></html>")
+                ct = "text/html"
+            elif self.path.startswith("/factories.html"):
+                b, ct = "<html><body>factories</body></html>", "text/html"
+            else:
+                b = "<html><body><div class='nav'></div><script src='/nav.js'></script></body></html>"
+                ct = "text/html"
+            self.send_response(200)
+            self.send_header("Content-Type", ct)
+            self.end_headers()
+            self.wfile.write(b.encode())
+
+    srv = HTTPServer(("127.0.0.1", 0), H)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    try:
+        ctx = ScanContext(target=f"http://127.0.0.1:{srv.server_port}/", polite=False)
+        apidiscovery.run(ctx)
+    finally:
+        srv.shutdown()
+    from urllib.parse import urlparse
+    paths = {urlparse(p).path for p in ctx.crawl_result.pages}
+    assert "/performance.html" in paths and "/factories.html" in paths   # JS 導覽頁被探出
+    assert "/api/stats/performance" in paths                              # 頁面註解裡的 API
+    assert any(f.action.endswith("/api/upload") for f in ctx.crawl_result.forms)  # 上傳表單被抓到
+    assert any(p.target_param == "period" for p in ctx.crawl_result.injection_points)
