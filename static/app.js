@@ -185,6 +185,26 @@
     }
   }
 
+  function renderTranscript(rows) {
+    var card = el("transcript-card");
+    if (!card) return;
+    if (!rows || !rows.length) return;
+    card.hidden = false;
+    var body = rows.slice(-300).map(function (r) {
+      var sc = r.status >= 500 ? "high" : r.status >= 400 ? "medium" : r.status >= 300 ? "low" : "info";
+      return "<tr><td class='small'>" + r.n + "</td>" +
+        "<td class='tl-t'>" + esc(r.t) + "</td>" +
+        "<td><code>" + esc(r.method) + "</code></td>" +
+        "<td><span class='mini sev-" + sc + "'>" + r.status + "</span></td>" +
+        "<td style='word-break:break-all'>" + esc(r.url) + "</td>" +
+        "<td class='small muted'>" + esc(r.note || "") + "</td></tr>";
+    }).join("");
+    el("transcript").innerHTML =
+      "<p class='muted small'>共 " + rows.length + " 筆請求</p>" +
+      "<table class='data-table'><thead><tr><th>#</th><th>時間</th><th>方法</th>" +
+      "<th>狀態</th><th>URL</th><th>備註</th></tr></thead><tbody>" + body + "</tbody></table>";
+  }
+
   async function poll() {
     let data;
     try {
@@ -200,6 +220,7 @@
     renderPhases(data.phase_steps);
     renderWar(data.war);
     renderTimeline(data.timeline);
+    renderTranscript(data.transcript);
     renderSummary(data.severity_counts);
     renderCrawl(data);
     renderFindings(data.findings);

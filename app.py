@@ -174,21 +174,44 @@ def start_scan():
     aggressive = request.form.get("aggressive") == "on"
     deep = request.form.get("deep") == "on"
     crawl = request.form.get("crawl", "on") == "on"
+    capture = request.form.get("capture") == "on"
+    resilience = request.form.get("resilience") == "on"
     try:
         max_pages = max(1, min(int(request.form.get("max_pages", 40)), 100))
     except (TypeError, ValueError):
         max_pages = 40
-    # 主動測試 / 深度掃描皆會主動送出流量,需額外授權確認
-    if (active or deep) and request.form.get("active_attested") != "on":
-        err = "啟用主動測試 / 深度掃描需另外確認你已獲授權對目標送出測試流量。"
-        return render_template("index.html", jobs=manager.list_jobs(), tools=_tools_summary(), error=err), 400
+
+    # 灰箱已認證掃描:使用者提供「自己的」帳密(僅對已授權目標)
+    login = None
+    login_url = request.form.get("login_url", "").strip()
+    login_user = request.form.get("login_user", "").strip()
+    login_pass = request.form.get("login_pass", "")
+    if login_url and login_user and login_pass:
+        from pentest.auth_login import LoginSpec
+        login = LoginSpec(
+            url=login_url, username=login_user, password=login_pass,
+            user_field=request.form.get("login_user_field", "").strip(),
+            pass_field=request.form.get("login_pass_field", "").strip(),
+        )
+    resilience = resilience and login is not None
+
+    def _err(msg):
+        return render_template("index.html", jobs=manager.list_jobs(),
+                               tools=_tools_summary(), error=msg), 400
+
+    # 主動測試 / 深度掃描 / 登入韌性測試皆會主動送出測試流量,需額外授權確認
+    if (active or deep or resilience) and request.form.get("active_attested") != "on":
+        return _err("啟用主動測試 / 深度掃描 / 登入韌性測試需另外確認你已獲授權對目標送出測試流量。")
+    if resilience and login is None:
+        return _err("登入韌性測試需要先填入登入網址與你自己的帳號/密碼。")
     try:
         scope = authorize(target, attested=attested)
     except AuthorizationError as exc:
-        return render_template("index.html", jobs=manager.list_jobs(), tools=_tools_summary(), error=str(exc)), 400
+        return _err(str(exc))
 
     job = manager.start(scope, polite=polite, active=active, aggressive=aggressive,
-                        crawl=crawl, max_pages=max_pages, deep=deep)
+                        crawl=crawl, max_pages=max_pages, deep=deep,
+                        login=login, capture=capture, resilience=resilience)
     return redirect(url_for("scan_view", job_id=job.id))
 
 
