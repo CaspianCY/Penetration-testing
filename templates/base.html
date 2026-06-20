@@ -12,6 +12,7 @@
     'index': 'index', 'start_scan': 'index', 'scan_view': 'scans_list',
     'dashboard': 'dashboard', 'scans_list': 'scans_list', 'sast_view': 'sast_view',
     'engagements_list': 'engagements_list', 'engagement_view': 'engagements_list',
+    'learning_view': 'learning_view',
   } %}
   {% set cur = nav_active.get(ep, ep) %}
   <header>
@@ -27,6 +28,7 @@
         <a href="{{ url_for('index') }}" class="{{ 'active' if cur == 'index' }}">＋ 新掃描</a>
         <a href="{{ url_for('sast_view') }}" class="{{ 'active' if cur == 'sast_view' }}">白箱</a>
         <a href="{{ url_for('dashboard') }}" class="{{ 'active' if cur == 'dashboard' }}">儀表板</a>
+        <a href="{{ url_for('learning_view') }}" class="{{ 'active' if cur == 'learning_view' }}">🧠 學習</a>
         <a href="{{ url_for('scans_list') }}" class="{{ 'active' if cur == 'scans_list' }}">掃描紀錄</a>
         <a href="{{ url_for('engagements_list') }}" class="{{ 'active' if cur == 'engagements_list' }}">案件報告</a>
       </nav>

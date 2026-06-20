@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}自我學習中樞 — Sentinel{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>🧠 自我學習中樞</h2>
+  <p class="hint">平台從每次掃描累積經驗:成功登入 / 命中弱點時記住「什麼技術棧 → 什麼方法有效」,
+    下次遇到同類目標就<strong>優先採用學過的做法</strong>(更快、更少探測噪音)。
+    這是回饋式知識庫,不改變非破壞性與授權原則。</p>
+
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-num">{{ data.total }}</div><div class="stat-cap">累積知識筆數</div></div>
+    <div class="stat-card"><div class="stat-num">{{ data.stacks|length }}</div><div class="stat-cap">學過的技術棧</div></div>
+    <div class="stat-card"><div class="stat-num">{{ data.login_profiles|length }}</div><div class="stat-cap">登入剖析</div></div>
+    <div class="stat-card"><div class="stat-num">{{ data.stack_findings|length }}</div><div class="stat-cap">技術棧→弱點型態</div></div>
+  </div>
+</section>
+
+<section class="card">
+  <h2>學到的登入方式(技術棧 → 有效登入路徑)</h2>
+  {% if data.login_profiles %}
+  <table class="data-table">
+    <thead><tr><th>技術棧(前端｜後端)</th><th>登入方式</th><th>路徑</th><th>成功次數</th></tr></thead>
+    <tbody>
+      {% for p in data.login_profiles %}
+      <tr>
+        <td><code>{{ p.key }}</code></td>
+        <td>{{ p.value.kind }}</td>
+        <td><code>{{ p.value.path }}</code></td>
+        <td>{{ p.success }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty">尚未學到登入剖析。對需要登入的目標做一次成功的已認證掃描後,這裡就會記住它的登入方式。</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>學到的弱點傾向(技術棧 → 常見弱點型態)</h2>
+  {% if data.stack_findings %}
+  <table class="data-table">
+    <thead><tr><th>技術棧</th><th>弱點型態</th><th>出現次數</th></tr></thead>
+    <tbody>
+      {% for p in data.stack_findings %}
+      <tr><td><code>{{ p.key }}</code></td><td>{{ p.value.kind }}</td><td>{{ p.success }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty">尚未累積弱點傾向。多掃幾個目標後,平台就能歸納「這種技術棧常見哪些弱點」。</p>
+  {% endif %}
+</section>
+{% endblock %}

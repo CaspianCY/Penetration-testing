@@ -258,6 +258,17 @@ def sast_view():
         shutil.rmtree(tmp, ignore_errors=True)
 
 
+@app.route("/learning")
+def learning_view():
+    """自我學習中樞:平台從歷次掃描累積了哪些經驗。"""
+    try:
+        data = storage.learning_summary()
+    except Exception as exc:
+        data = {"total": 0, "categories": {}, "stacks": [], "login_profiles": [],
+                "stack_findings": [], "error": str(exc)}
+    return render_template("learning.html", data=data)
+
+
 @app.route("/scan", methods=["POST"])
 def start_scan():
     target = request.form.get("target", "")
