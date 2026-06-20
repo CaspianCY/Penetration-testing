@@ -88,6 +88,13 @@
           <input type="text" id="login_pass" name="login_pass" autocomplete="off">
         </span>
       </div>
+      <div class="field">
+        <label for="login_api">登入 API（JSON,選用;SPA 最佳解)</label>
+        <input type="text" id="login_api" name="login_api" autocomplete="off"
+               placeholder="https://example.com/api/login（留空會自動探測 /api/login 等)">
+        <p class="hint">SPA / JS 登入時填這個:平台會 <code>POST {"username","password"}</code> 到登入 API、自動取得 token 帶上(像前端 JS 一樣)。
+          <strong>留空也會在表單登入失敗時自動探測常見登入 API。</strong>這樣你的 server log 就會看到真正的登入。</p>
+      </div>
       <label class="checkbox">
         <input type="checkbox" name="resilience" id="resilience-toggle">
         <span class="lt">登入韌性測試<span class="muted">(對上面帳號試一份<strong>有上限</strong>的常見弱密碼,測登入擋不擋得住線上猜測 + 是否缺鎖定;非大字典爆破)</span></span>

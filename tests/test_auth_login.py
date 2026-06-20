@@ -165,6 +165,60 @@ def test_discover_login_url_finds_common_path():
     assert found.endswith("/login")
 
 
+def test_extract_token_from_json():
+    from pentest.auth_login import _extract_token
+    assert _extract_token({"token": "abcdef1234567890"}) == "abcdef1234567890"
+    assert _extract_token({"data": {"accessToken": "xyz1234567890abc"}}) == "xyz1234567890abc"
+    assert _extract_token({"ok": True, "msg": "hi"}) == ""          # 無 token
+    assert _extract_token({"token": "short"}) == ""                 # 太短不算
+
+
+def test_json_api_login_and_autodiscover():
+    """只給帳密 → 自動探測 /api/login → 取得 token,之後請求帶 Bearer。"""
+    import json as _json
+
+    token = "eyJhbGciOiJIUzI1NiJ9.demo.sig1234567890"
+
+    class H(BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def do_GET(self):
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html")
+            self.end_headers()
+            self.wfile.write(b"<html><body><div id='root'></div></body></html>")  # SPA 空殼
+
+        def do_POST(self):
+            n = int(self.headers.get("Content-Length", 0))
+            try:
+                body = _json.loads(self.rfile.read(n) or b"{}")
+            except Exception:
+                body = {}
+            ok = self.path == "/api/login" and body.get("username") == "alice" \
+                and body.get("password") == "s3cret"
+            self.send_response(200 if ok else 404)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(_json.dumps({"token": token} if ok else {"e": 1}).encode())
+
+    srv = HTTPServer(("127.0.0.1", 0), H)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    base = f"http://127.0.0.1:{srv.server_port}"
+    try:
+        ctx = ScanContext(target=base + "/", polite=False)
+        # 直接指定 API
+        ok, headers, cookies, detail, tok = auth_login.api_login(
+            ctx, base + "/api/login", "alice", "s3cret")
+        assert ok and headers["Authorization"] == f"Bearer {token}"
+        # 自動探測(不指定路徑)
+        dok, dheaders, _, ddetail, dtok, api = auth_login.discover_api_login(ctx, "alice", "s3cret")
+    finally:
+        srv.shutdown()
+    assert dok and dheaders["Authorization"] == f"Bearer {token}"
+    assert api.endswith("/api/login")
+
+
 def test_weak_self_credential():
     from pentest.auth_login import weak_self_credential
 
