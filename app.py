@@ -212,7 +212,7 @@ def start_scan():
     login_url = request.form.get("login_url", "").strip()
     login_user = request.form.get("login_user", "").strip()
     login_pass = request.form.get("login_pass", "")
-    if login_url and login_user and login_pass:
+    if login_user and login_pass:          # 登入頁網址留空 → 由掃描器自動尋找登入頁
         from pentest.auth_login import LoginSpec
         login = LoginSpec(
             url=login_url, username=login_user, password=login_pass,

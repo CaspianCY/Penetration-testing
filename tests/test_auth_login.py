@@ -102,6 +102,34 @@ def test_capture_masks_sensitive_query_values():
     assert "secret" not in url and "xyz" not in url and "abc" not in url
 
 
+def test_discover_login_url_finds_common_path():
+    """只給首頁,系統自動找出含密碼欄位的登入頁。"""
+    class H(BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def do_GET(self):
+            if self.path.startswith("/login"):
+                body = (b"<html><body><form action='/login' method='post'>"
+                        b"<input name='username' type='text'>"
+                        b"<input name='password' type='password'></form></body></html>")
+            else:
+                body = b"<html><body><h1>home</h1></body></html>"     # 首頁無表單
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html")
+            self.end_headers()
+            self.wfile.write(body)
+
+    srv = HTTPServer(("127.0.0.1", 0), H)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    base = f"http://127.0.0.1:{srv.server_port}"
+    try:
+        found = auth_login.discover_login_url(ScanContext(target=base + "/", polite=False))
+    finally:
+        srv.shutdown()
+    assert found.endswith("/login")
+
+
 def test_weak_self_credential():
     from pentest.auth_login import weak_self_credential
 
