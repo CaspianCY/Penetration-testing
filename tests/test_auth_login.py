@@ -108,6 +108,43 @@ def test_capture_off_records_nothing():
     assert ctx.transcript == []
 
 
+def test_pasted_cookie_authenticates_scan():
+    """SPA/JS 登入時改貼已登入 Cookie → 掃描以該工作階段進行(看得到登入後內容)。"""
+    import time
+
+    from pentest.authorization import ScopeRecord
+    from pentest.scanner import ScanManager
+
+    class H(BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def do_GET(self):
+            authed = "sessionid=XYZ" in self.headers.get("Cookie", "")
+            body = (b"<html><body><form action='/s' method='post'><input name='q' type='text'>"
+                    b"</form></body></html>") if authed else b"<html><body>please login</body></html>"
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html")
+            self.end_headers()
+            self.wfile.write(body)
+
+    srv = HTTPServer(("127.0.0.1", 0), H)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    base = f"http://127.0.0.1:{srv.server_port}"
+    scope = ScopeRecord(target=base + "/", host="127.0.0.1", authorized_by="self", attested=True)
+    job = ScanManager().start(scope, polite=False, crawl=True, active=False,
+                              cookies={"sessionid": "XYZ"})
+    try:
+        for _ in range(120):
+            if job.status in ("done", "error"):
+                break
+            time.sleep(0.2)
+    finally:
+        srv.shutdown()
+    assert job.crawl_summary.get("form_count") == 1               # 已認證 → 看得到表單
+    assert any(f.check_id == "auth-session-provided" for f in job.findings)
+
+
 def test_crawl_reaches_pages_only_via_seed():
     """登入後的後台(未從首頁連出)需靠 seed 才爬得到 → 驗證已認證掃描的深入。"""
     class H(BaseHTTPRequestHandler):

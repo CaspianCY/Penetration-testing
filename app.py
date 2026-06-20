@@ -61,6 +61,19 @@ def _mask(url: str) -> str:
 _REQUIRE_PROXY = os.environ.get("SENTINEL_REQUIRE_PROXY", "").lower() in ("1", "true", "yes", "on")
 
 
+def _parse_cookie_header(raw: str) -> dict:
+    """把瀏覽器複製來的 Cookie 字串(k=v; k2=v2)解析成 dict。"""
+    out: dict = {}
+    for part in (raw or "").split(";"):
+        part = part.strip()
+        if "=" in part:
+            k, v = part.split("=", 1)
+            k = k.strip()
+            if k:
+                out[k] = v.strip()
+    return out
+
+
 def _resolve_proxy(form_val: str | None) -> str:
     """決定出口 Proxy:表單欄位優先,否則用環境變數(部署層可設固定 VPN 出口)。"""
     v = (form_val or "").strip()
@@ -208,6 +221,11 @@ def start_scan():
         )
     resilience = resilience and login is not None
 
+    # SPA / JS 登入無法自動處理時:直接貼上瀏覽器已登入的 Cookie / Authorization 權杖
+    cookies = _parse_cookie_header(request.form.get("login_cookie", ""))
+    auth_header = request.form.get("auth_header", "").strip()
+    auth_headers = {"Authorization": auth_header} if auth_header else {}
+
     def _err(msg):
         return render_template("index.html", jobs=manager.list_jobs(),
                                tools=_tools_summary(), error=msg), 400
@@ -234,7 +252,8 @@ def start_scan():
 
     job = manager.start(scope, polite=polite, active=active, aggressive=aggressive,
                         crawl=crawl, max_pages=max_pages, deep=deep,
-                        login=login, capture=capture, resilience=resilience, proxy=proxy)
+                        login=login, capture=capture, resilience=resilience, proxy=proxy,
+                        cookies=cookies, auth_headers=auth_headers)
     return redirect(url_for("scan_view", job_id=job.id))
 
 

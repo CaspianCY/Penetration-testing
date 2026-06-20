@@ -83,3 +83,10 @@ def test_resolve_proxy_prefers_form_then_env(monkeypatch, tmp_path):
     app = _reload(monkeypatch, {"SENTINEL_PROXY": "socks5://127.0.0.1:1080"}, tmp_path)
     assert app._resolve_proxy("") == "socks5://127.0.0.1:1080"          # 環境變數預設
     assert app._resolve_proxy("http://override:3128") == "http://override:3128"  # 表單優先
+
+
+def test_parse_cookie_header(monkeypatch, tmp_path):
+    app = _reload(monkeypatch, {}, tmp_path)
+    assert app._parse_cookie_header("sessionid=abc; token=xyz") == {"sessionid": "abc", "token": "xyz"}
+    assert app._parse_cookie_header("a=1; bad; b=2") == {"a": "1", "b": "2"}   # 略過無 = 的片段
+    assert app._parse_cookie_header("") == {}

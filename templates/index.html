@@ -90,6 +90,21 @@
         <input type="checkbox" name="resilience" id="resilience-toggle">
         <span class="lt">登入韌性測試<span class="muted">(對上面帳號試一份<strong>有上限</strong>的常見弱密碼,測登入擋不擋得住線上猜測 + 是否缺鎖定;非大字典爆破)</span></span>
       </label>
+
+      <p class="hint sub-hint" style="margin-left:0;margin-top:.6rem">
+        <strong>SPA / JS 應用(畫面由前端 JS 繪製)無法自動登入</strong>——請在瀏覽器登入後,
+        從開發者工具複製<strong>已登入的 Cookie</strong> 或 <strong>Authorization 權杖</strong>貼在下面。
+      </p>
+      <div class="field">
+        <label for="login_cookie">已登入 Cookie（SPA 用,選用）</label>
+        <input type="text" id="login_cookie" name="login_cookie" autocomplete="off"
+               placeholder="sessionid=abc123; token=xyz">
+      </div>
+      <div class="field">
+        <label for="auth_header">Authorization 標頭（Token / JWT,選用)</label>
+        <input type="text" id="auth_header" name="auth_header" autocomplete="off"
+               placeholder="Bearer eyJhbGci...">
+      </div>
     </fieldset>
 
     <label class="checkbox attest">
