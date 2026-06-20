@@ -21,15 +21,25 @@ def _fresh_app(monkeypatch, tmp_path):
     return importlib.reload(_app)
 
 
-def test_app_shell_serves(monkeypatch, tmp_path):
+def test_app_shell_is_homepage(monkeypatch, tmp_path):
     app_mod = _fresh_app(monkeypatch, tmp_path)
     client = app_mod.app.test_client()
-    for path in ("/app", "/app/"):
+    # 首頁(/)與 /app、/app/ 都應提供 SPA 外殼
+    for path in ("/", "/app", "/app/"):
         r = client.get(path)
         assert r.status_code == 200
         html = r.get_data(as_text=True)
-        assert "spa.css" in html and "spa.js" in html and "vue@3" in html
+        assert "spa.css" in html and "spa.js" in html
+        assert "vue.global.prod.js" in html      # 本地自帶 Vue,不依賴外部 CDN
         assert 'id="app"' in html
+
+
+def test_classic_ui_still_reachable(monkeypatch, tmp_path):
+    app_mod = _fresh_app(monkeypatch, tmp_path)
+    client = app_mod.app.test_client()
+    r = client.get("/classic")
+    assert r.status_code == 200
+    assert "開始新掃描" in r.get_data(as_text=True)
 
 
 def test_spa_static_assets(monkeypatch, tmp_path):
@@ -37,8 +47,10 @@ def test_spa_static_assets(monkeypatch, tmp_path):
     client = app_mod.app.test_client()
     css = client.get("/static/spa.css")
     js = client.get("/static/spa.js")
+    vue = client.get("/static/vue.global.prod.js")
     assert css.status_code == 200 and len(css.get_data()) > 1000
     assert js.status_code == 200 and b"createApp" in js.get_data()
+    assert vue.status_code == 200 and b"Vue" in vue.get_data()
 
 
 def test_json_endpoints(monkeypatch, tmp_path):

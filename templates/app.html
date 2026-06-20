@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Sentinel — Pentest Console</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='spa.css') }}">
-  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="{{ url_for('static', filename='vue.global.prod.js') }}"></script>
 </head>
 <body>
   <div id="app">
     <!-- 載入中(Vue 掛載前) -->
-    <div class="boot">載入中…若長時間停在此畫面,表示瀏覽器無法載入 Vue(請確認可連外)。</div>
+    <div class="boot">載入中…若長時間停在此畫面,請重新整理(Ctrl/Cmd+Shift+R)清快取。</div>
   </div>
   <script src="{{ url_for('static', filename='spa.js') }}"></script>
 </body>

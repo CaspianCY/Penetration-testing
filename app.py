@@ -125,15 +125,17 @@ def _tools_summary() -> dict:
 
 
 @app.route("/")
-def index():
-    return render_template("index.html", jobs=manager.list_jobs(), tools=_tools_summary())
-
-
 @app.route("/app")
 @app.route("/app/")
-def spa():
-    """新版 SPA(Vue 3,免 build)。與經典介面並存,驗證後再切換。"""
+def index():
+    """首頁 = 新版 Vue SPA(方法論分頁:黑/灰/白箱)。"""
     return render_template("app.html")
+
+
+@app.route("/classic")
+def classic_index():
+    """舊版(經典)伺服器渲染介面,作為 SPA 的後備。"""
+    return render_template("index.html", jobs=manager.list_jobs(), tools=_tools_summary())
 
 
 @app.route("/api/tools")

@@ -57,7 +57,7 @@ const AppShell = {
         <a :class="{active: route.name==='learning'}" @click="$emit('go','#/learning')">🧠 學習</a>
         <a :class="{active: route.name==='sast'}" @click="$emit('go','#/sast')">白箱</a>
         <a href="/dashboard">儀表板</a>
-        <a href="/">經典介面</a>
+        <a href="/classic">經典介面</a>
       </nav>
     </div>
   </header>`,
