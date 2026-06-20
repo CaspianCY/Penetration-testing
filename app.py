@@ -43,12 +43,18 @@ def start_scan():
     target = request.form.get("target", "")
     attested = request.form.get("attested") == "on"
     polite = request.form.get("polite", "on") == "on"
+    active = request.form.get("active") == "on"
+    aggressive = request.form.get("aggressive") == "on"
+    # 主動測試需額外確認
+    if active and request.form.get("active_attested") != "on":
+        err = "啟用主動測試需另外確認你已獲授權對目標送出測試 payload。"
+        return render_template("index.html", jobs=manager.list_jobs(), error=err), 400
     try:
         scope = authorize(target, attested=attested)
     except AuthorizationError as exc:
         return render_template("index.html", jobs=manager.list_jobs(), error=str(exc)), 400
 
-    job = manager.start(scope, polite=polite)
+    job = manager.start(scope, polite=polite, active=active, aggressive=aggressive)
     return redirect(url_for("scan_view", job_id=job.id))
 
 

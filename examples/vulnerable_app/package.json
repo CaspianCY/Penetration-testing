@@ -1,0 +1,11 @@
+{
+  "name": "vulnerable-app-demo",
+  "version": "0.0.1",
+  "description": "Intentionally vulnerable demo for SAST testing — DO NOT DEPLOY",
+  "dependencies": {
+    "express": "^4.18.2",
+    "xlsx": "0.18.5",
+    "lodash": "4.17.20",
+    "pg": "^8.11.0"
+  }
+}

@@ -1,0 +1,15 @@
+<!-- ⚠️ 故意有漏洞:展示 SAST 偵測用 -->
+<!doctype html>
+<html>
+<body>
+  <div id="report"></div>
+  <script>
+    fetch('/api/bonus').then(r => r.json()).then(data => {
+      // 漏洞:使用者可控資料直接寫入 innerHTML,未經 escape → Stored XSS
+      document.getElementById('report').innerHTML = data.note;
+      // 漏洞:document.write 注入
+      document.write('<h1>' + data.title + '</h1>');
+    });
+  </script>
+</body>
+</html>

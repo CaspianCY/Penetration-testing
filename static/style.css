@@ -53,6 +53,10 @@ button:disabled { background: #94a3b8; cursor: not-allowed; }
 
 .actions { margin-top: 1rem; }
 
+.active-box { border: 1px solid #fca5a5; background: #fff1f2; border-radius: .5rem;
+  padding: .6rem 1rem; margin: 1rem 0; }
+.active-box legend { font-weight: 700; color: #991b1b; padding: 0 .4rem; }
+
 .finding {
   border: 1px solid var(--border); border-left-width: 5px; border-radius: .4rem;
   padding: .8rem 1rem; margin: .8rem 0; background: #f8fafc;

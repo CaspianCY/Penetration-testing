@@ -14,6 +14,25 @@
       低衝擊模式(限速、降低對目標負載 — 建議開啟)
     </label>
 
+    <fieldset class="active-box">
+      <legend>主動測試(進階)</legend>
+      <label class="checkbox">
+        <input type="checkbox" name="active" id="active-toggle">
+        對表單與參數送出<strong>非破壞性</strong>的注入 / XSS / 轉址探測 payload,
+        以驗證「是否打得進來、是否可能竄改資料」。
+      </label>
+      <label class="checkbox">
+        <input type="checkbox" name="aggressive">
+        併用時間延遲偵測(對目標負載較高,偵測較準)
+      </label>
+      <label class="checkbox attest" id="active-attest" hidden>
+        <input type="checkbox" name="active_attested">
+        我了解主動測試會<strong>主動送出測試 payload</strong>,並確認已獲授權對此目標執行。
+      </label>
+      <p class="hint">說明:本工具僅<strong>偵測</strong>漏洞是否存在(證明竄改的可能性),
+         <strong>不會</strong>實際執行 UPDATE / DELETE / DROP 去更動你的資料。</p>
+    </fieldset>
+
     <label class="checkbox attest">
       <input type="checkbox" name="attested" required>
       我確認我<strong>擁有此目標</strong>,或已取得擁有者的<strong>明確授權</strong>進行測試。
@@ -21,8 +40,8 @@
 
     <button type="submit">開始掃描</button>
   </form>
-  <p class="hint">本平台只做非破壞性檢查(讀取式探測),不發送攻擊 payload、不嘗試利用漏洞,
-     也不提供任何規避偵測功能。</p>
+  <p class="hint">被動弱掃只做讀取式探測;主動測試會送出非破壞性的探測 payload。兩者皆不提供
+     任何規避偵測或破壞性功能。</p>
 </section>
 
 {% if jobs %}
@@ -39,4 +58,18 @@
   </ul>
 </section>
 {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // 勾選「主動測試」時,顯示其專屬的授權確認
+  var toggle = document.getElementById("active-toggle");
+  var attest = document.getElementById("active-attest");
+  if (toggle && attest) {
+    toggle.addEventListener("change", function () {
+      attest.hidden = !toggle.checked;
+      attest.querySelector("input").required = toggle.checked;
+    });
+  }
+</script>
 {% endblock %}

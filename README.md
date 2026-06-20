@@ -11,12 +11,18 @@ HTML / Markdown / JSON 報告。內建一個 AI 模組(由 Claude 驅動),會分
 ## 功能
 
 - **指定目標** — 在網頁輸入一個 URL 即可開始。
-- **非破壞性弱掃** — 只做讀取式檢查,不送出攻擊 payload、不嘗試利用漏洞:
+- **被動弱掃** — 只做讀取式檢查,不送出攻擊 payload、不嘗試利用漏洞:
   - 安全回應標頭(CSP、HSTS、X-Frame-Options、X-Content-Type-Options…)
   - TLS / 憑證(到期、協定版本、自簽)
   - Cookie 旗標(Secure / HttpOnly / SameSite)
   - 資訊外洩 / 敏感檔案(`.git`、`.env`、`server-status`…)
   - 表單與 CSRF / 密碼欄位處理
+- **主動測試(opt-in)** — 對表單與參數送出**非破壞性**探測 payload,驗證
+  「是否打得進來、是否可能竄改資料」:
+  - SQL Injection(錯誤型 / 布林型 / 進階時間延遲型)
+  - 反射型 XSS(標記反射偵測)
+  - 開放轉址(Open Redirect)
+  - 僅**證明漏洞存在**,不執行 UPDATE / DELETE / DROP 去更動資料
 - **即時進度儀表板** — 攻擊方(測試者)可即時看到每一項檢查的進度。
 - **弱點報告** — 依嚴重度分類,每項弱點都附修補建議與參考連結。
 - **修補指引** — 直接告訴你「怎麼修」。
@@ -24,12 +30,25 @@ HTML / Markdown / JSON 報告。內建一個 AI 模組(由 Claude 驅動),會分
 - **低衝擊模式** — 限速、降低併發、自訂 User-Agent,減少對目標負載。
 - **資料持久化** — 掃描任務、弱點、授權紀錄、AI 分析皆寫入資料庫(PostgreSQL,
   本機可退回 SQLite),程式重啟後仍可查閱歷史。
+- **白箱 SAST** — 對提供的原始碼做靜態分析,找出 SQLi / XSS / 硬編碼機密 /
+  弱雜湊 / 命令注入 / 已知 CVE 相依套件,帶「檔案:行號」位置。
+- **灰箱測試** — 帶認證(Cookie / 標頭)掃描登入後的端點。
+- **案件編排(PTES)** — 依偵察→弱點分析→漏洞利用驗證→權限提升評估→報告(含清理)
+  的階段組織測試;對應 PTES / OSSTMM / OWASP WSTG / OWASP Top 10。
+- **專業 .docx 報告** — 文件管控、管理摘要、Findings 統計、OWASP 覆蓋率矩陣、
+  每個 finding 帶 OWASP / CWE / CVSS / PoC / 修補成本、P0–P3 修補路線圖、
+  跨次稽核 New / Recurring / Fixed 追蹤、清理與機密聲明。
 
 ## 設計上刻意「不做」的事
 
 本平台**不提供**規避偵測 / 反鑑識 / 清除日誌 / IDS-WAF 規避這類功能,也**不**
-對目標發送破壞性或阻斷服務(DoS)流量。掃描全程非破壞性。「低衝擊模式」是
-為了減少對目標的負載,不是為了躲避對方的防禦監控。
+對目標發送破壞性或阻斷服務(DoS)流量。「低衝擊模式」是為了減少對目標的負載,
+不是為了躲避對方的防禦監控。
+
+關於主動測試:本工具採「**無害驗證**」原則——只證明漏洞是否存在(例如以單引號觸發
+DB 錯誤、用布林真假/時間延遲判斷注入),據此回報「攻擊者可能讀取甚至**竄改**資料」
+的風險,但**不會**實際執行 `UPDATE` / `DELETE` / `DROP` 等會破壞或更動目標資料的語句,
+XSS 也僅檢查標記是否被未跳脫反射、不執行實際攻擊。所有請求受 `max_requests` 上限保護。
 
 ## 快速開始
 
@@ -46,6 +65,34 @@ export DATABASE_URL="postgresql+psycopg://user:pass@localhost:5432/sentinel"
 python app.py
 # 開啟 http://127.0.0.1:5000
 ```
+
+### 案件編排與專業報告(engage.py)
+
+`engage.py` 依 PTES 階段執行一次完整案件並產出 `.docx` 報告:
+
+```bash
+# 白箱 SAST(分析原始碼)
+python engage.py --name "Volvo DMS" --sast ./examples/vulnerable_app \
+    --methodology white-box --test-type SAST --tester "你的名字" --out volvo.docx
+
+# 灰箱 DAST(帶 session cookie 掃登入後端點)
+python engage.py --name "My App" --dast https://staging.example.com \
+    --methodology grey-box --test-type DAST --cookie "session=abc" --active
+
+# hybrid(同時 SAST + DAST),並用 DATABASE_URL 做跨次稽核比對
+python engage.py --name "My App" --sast ./src --dast https://staging.example.com \
+    --test-type hybrid --db "$DATABASE_URL"
+```
+
+設定 `--db`(或 `DATABASE_URL`)後,報告會以穩定 ID 跨次比對,標示
+🆕 New / 🔁 Recurring / ✅ Fixed。`examples/vulnerable_app/` 是**故意有漏洞**的
+範例程式,供展示 SAST 偵測用(請勿部署)。
+
+### 方法論與界線
+
+- **漏洞利用**:採無害驗證 + PoC(證明可利用),不對 production 執行實際入侵。
+- **權限提升**:以偵測 + 影響評估呈現(IDOR / 橫向越權等),不做自動化提權。
+- **清除測試痕跡**:清理測試方自身產物 + 完整性聲明,**不**竄改目標稽核日誌 / 反鑑識。
 
 ### 資料庫
 
@@ -73,8 +120,14 @@ pentest/
   scanner.py            掃描排程、任務狀態、進度
   checks/               各項非破壞性檢查模組
   report.py             報告產生(HTML / MD / JSON)
+  docx_report.py        專業 .docx 報告(對齊業界格式)
   ai_advisor.py         AI 模組(Claude,含規則式 fallback)
   storage.py            持久化層(SQLAlchemy:PostgreSQL / SQLite)
+  standards.py          OWASP / CWE / CVSS / PTES / WSTG 對應
+  engagement.py         案件模型與整合性/清理紀錄
+  sast/                 白箱靜態分析引擎與規則
+engage.py               案件編排 CLI(SAST / DAST / hybrid → .docx)
+examples/vulnerable_app 故意有漏洞的 SAST 示範程式
 templates/  static/     前端
 tests/                  單元測試
 ```
