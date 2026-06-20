@@ -1,3 +1,6 @@
 Flask>=3.0,<4.0
 requests>=2.31
 anthropic>=0.40
+SQLAlchemy>=2.0
+# PostgreSQL 驅動(正式部署)。本機若只用 SQLite 可不裝。
+psycopg[binary]>=3.1

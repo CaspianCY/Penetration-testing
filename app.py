@@ -21,9 +21,16 @@ from flask import (
 from pentest import ai_advisor, report
 from pentest.authorization import AuthorizationError, authorize
 from pentest.scanner import ScanManager
+from pentest.storage import Storage
 
 app = Flask(__name__)
-manager = ScanManager()
+
+# 正式部署請設定 DATABASE_URL 指向 PostgreSQL,例如:
+#   postgresql+psycopg://user:pass@localhost:5432/sentinel
+# 未設定時退回單檔 SQLite,方便本機開發。
+_DB_URL = os.environ.get("DATABASE_URL", "sqlite:///sentinel.db")
+storage = Storage(_DB_URL)
+manager = ScanManager(storage=storage)
 
 
 @app.route("/")
@@ -69,6 +76,10 @@ def api_scan_ai(job_id: str):
     if job.status != "done":
         return jsonify({"error": "掃描尚未完成,無法進行 AI 分析。"}), 409
     job.ai_summary = ai_advisor.analyze(job)
+    try:
+        storage.save_ai(job.id, job.ai_summary, ai_advisor.model_name())
+    except Exception:
+        pass
     return jsonify({"ai_summary": job.ai_summary})
 
 

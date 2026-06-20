@@ -22,6 +22,8 @@ HTML / Markdown / JSON 報告。內建一個 AI 模組(由 Claude 驅動),會分
 - **修補指引** — 直接告訴你「怎麼修」。
 - **AI 模組** — Claude 分析整體弱點態勢、排優先序、產生修補計畫。
 - **低衝擊模式** — 限速、降低併發、自訂 User-Agent,減少對目標負載。
+- **資料持久化** — 掃描任務、弱點、授權紀錄、AI 分析皆寫入資料庫(PostgreSQL,
+  本機可退回 SQLite),程式重啟後仍可查閱歷史。
 
 ## 設計上刻意「不做」的事
 
@@ -38,9 +40,19 @@ pip install -r requirements.txt
 # 選用:設定 Claude API 金鑰以啟用 AI 模組(未設定時自動退回規則式分析)
 export ANTHROPIC_API_KEY="sk-ant-..."
 
+# 選用:指向 PostgreSQL(未設定時退回單檔 SQLite)
+export DATABASE_URL="postgresql+psycopg://user:pass@localhost:5432/sentinel"
+
 python app.py
 # 開啟 http://127.0.0.1:5000
 ```
+
+### 資料庫
+
+- 正式部署:設定 `DATABASE_URL` 為 PostgreSQL 連線字串(驅動用 `psycopg` v3)。
+- 本機/測試:不設定即使用 `sqlite:///sentinel.db`,免裝資料庫。
+- 資料表(SQLAlchemy 自動建立):`scans`、`findings`、`scope_records`。
+- AI 分析結果存於 `scans` 列(`ai_summary` / `ai_model` / `ai_generated_at`)。
 
 ## 使用流程
 
@@ -62,6 +74,7 @@ pentest/
   checks/               各項非破壞性檢查模組
   report.py             報告產生(HTML / MD / JSON)
   ai_advisor.py         AI 模組(Claude,含規則式 fallback)
+  storage.py            持久化層(SQLAlchemy:PostgreSQL / SQLite)
 templates/  static/     前端
 tests/                  單元測試
 ```

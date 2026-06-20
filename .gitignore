@@ -5,7 +5,12 @@ venv/
 env/
 *.env
 .env
+# 但保留範例設定檔(供版本控管)
+!config.example.env
 reports/
 *.log
+*.db
+*.sqlite
+*.sqlite3
 .DS_Store
 .pytest_cache/
