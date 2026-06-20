@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from pentest.checks.base import Severity
 from pentest.tools import (
     nmap_tool, nuclei_tool, nikto_tool, ffuf_tool, sqlmap_tool,
-    whatweb_tool, wafw00f_tool, sslscan_tool,
+    whatweb_tool, wafw00f_tool, sslscan_tool, wpscan_tool,
 )
 
 
@@ -91,9 +91,26 @@ def test_sslscan_parse_flags_weak_protocols():
     assert not any("TLSv1.2" in t for t in sevs)
 
 
+def test_wpscan_parse_version_vuln_users():
+    out = ('{"version":{"number":"5.8","status":"insecure",'
+           '"vulnerabilities":[{"title":"Core RCE","references":{"cve":["2021-1111"]}}]},'
+           '"plugins":{"akismet":{"vulnerabilities":[{"title":"Plugin XSS"}]}},'
+           '"users":{"admin":{},"editor":{}}}')
+    fs = wpscan_tool.parse(out)
+    titles = " ".join(f.title for f in fs)
+    assert "WordPress 版本 5.8" in titles
+    assert any(f.severity == Severity.HIGH for f in fs)        # 核心 + 外掛弱點
+    assert "2 個 WordPress 使用者" in titles                    # 列舉到 admin/editor
+
+
+def test_wpscan_parse_not_wordpress():
+    fs = wpscan_tool.parse("The remote website is up, but does not seem to be running WordPress.")
+    assert fs and "非 WordPress" in fs[0].title
+
+
 def test_adapters_registered():
     from pentest.tools import ADAPTERS, installed_summary
     names = {a.name for a in ADAPTERS}
     assert {"nmap", "nuclei", "ffuf", "nikto", "sqlmap",
-            "whatweb", "wafw00f", "sslscan"} <= names
+            "whatweb", "wafw00f", "sslscan", "wpscan"} <= names
     assert set(installed_summary().keys()) == names

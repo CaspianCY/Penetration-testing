@@ -18,7 +18,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 # 業界工具(來自 Kali repo)+ Python 執行環境
 RUN apt-get update && apt-get install -y --no-install-recommends \
         python3 python3-pip \
-        nmap nikto sqlmap whatweb wafw00f sslscan \
+        nmap nikto sqlmap whatweb wafw00f sslscan wpscan \
         gobuster ffuf nuclei wfuzz dirb dnsrecon \
         ca-certificates curl \
     && rm -rf /var/lib/apt/lists/*

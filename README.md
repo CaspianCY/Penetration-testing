@@ -25,10 +25,11 @@ HTML / Markdown / JSON 報告。內建一個 AI 模組(由 Claude 驅動),會分
   - 僅**證明漏洞存在**,不執行 UPDATE / DELETE / DROP 去更動資料
 - **深度掃描 / 工具編排(opt-in)** — 呼叫業界真實工具,依 PTES 階段編排,
   主控台即時輸出;有裝就跑、沒裝自動退回內建檢查:
-  - **Nmap**(埠/服務偵察)、**ffuf**(內容探索/目錄爆破)、
-    **Nuclei**(數千模板化弱點掃描)、**Nikto**(Web 伺服器)、
-    **sqlmap**(SQLi 偵測,安全模式、不取資料)
+  - **Nmap**(埠/服務)、**WhatWeb**(技術指紋)、**wafw00f**(WAF 偵測)、
+    **ffuf**(內容探索)、**sslscan**(TLS 深掃)、**Nuclei**(模板掃描)、
+    **Nikto**(Web 伺服器)、**WPScan**(WordPress)、**sqlmap**(SQLi,安全模式)
   - findings 映射到 OWASP / CWE / **CVSS 3.1 向量** / **MITRE ATT&CK** 技術
+  - 工具輸出與這些對應一併寫入 .docx 報告(含「使用的工具」一節)
 - **即時進度儀表板** — 攻擊方(測試者)可即時看到每一項檢查的進度。
 - **弱點報告** — 依嚴重度分類,每項弱點都附修補建議與參考連結。
 - **修補指引** — 直接告訴你「怎麼修」。
@@ -108,6 +109,10 @@ python engage.py --name "Volvo DMS" --sast ./examples/vulnerable_app \
 # 灰箱 DAST(帶 session cookie 掃登入後端點)
 python engage.py --name "My App" --dast https://staging.example.com \
     --methodology grey-box --test-type DAST --cookie "session=abc" --active
+
+# 深度 DAST(編排真實工具,輸出寫進 .docx 報告)
+python engage.py --name "My App" --dast https://staging.example.com \
+    --test-type DAST --deep --out report.docx
 
 # hybrid(同時 SAST + DAST),並用 DATABASE_URL 做跨次稽核比對
 python engage.py --name "My App" --sast ./src --dast https://staging.example.com \

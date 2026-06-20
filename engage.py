@@ -51,16 +51,25 @@ def run_sast(engagement: Engagement, path: str) -> list:
 
 
 def run_dast(engagement: Engagement, url: str, *, active: bool, aggressive: bool,
-             cookies: dict, headers: dict, polite: bool) -> list:
+             cookies: dict, headers: dict, polite: bool, deep: bool = False) -> list:
     engagement.log_action(f"[偵察] DAST 目標:{url}(認證={'有' if cookies or headers else '無'})")
+
+    def _console(line: str) -> None:
+        print("   │ " + line)
+
     ctx = ScanContext(
         target=url, polite=polite, delay=0.2 if polite else 0,
         aggressive=aggressive, auth_headers=headers, cookies=cookies,
+        emit=_console if deep else None,
     )
     findings = []
     checks = list(REGISTRY) + ([ACTIVE_CHECK] if active else [])
+    if deep:
+        from pentest.tools import ADAPTERS
+        checks += [(a.name, a.label, a) for a in ADAPTERS]
     for check_id, label, module in checks:
         engagement.log_action(f"[弱點分析/漏洞利用驗證] {label}")
+        print(f"   ▸ {label}")
         try:
             findings.extend(module.run(ctx))
         except Exception as exc:
@@ -85,6 +94,8 @@ def main(argv=None) -> int:
     ap.add_argument("--client", default="")
     ap.add_argument("--active", action="store_true", help="DAST 啟用主動測試(注入/XSS)")
     ap.add_argument("--aggressive", action="store_true", help="主動測試含時間延遲偵測")
+    ap.add_argument("--deep", action="store_true",
+                    help="DAST 啟用工具編排(nmap/nuclei/ffuf/nikto/sqlmap/whatweb…),輸出寫進報告")
     ap.add_argument("--cookie", action="append", help="灰箱認證 Cookie,如 session=abc(可多次)")
     ap.add_argument("--header", action="append", help="灰箱認證標頭,如 'Authorization: Bearer x'(可多次)")
     ap.add_argument("--no-polite", action="store_true", help="關閉低衝擊限速")
@@ -118,7 +129,7 @@ def main(argv=None) -> int:
             engagement, args.dast,
             active=args.active, aggressive=args.aggressive,
             cookies=_parse_kv(args.cookie), headers=_parse_kv(args.header, sep=":"),
-            polite=not args.no_polite,
+            polite=not args.no_polite, deep=args.deep,
         )
 
     # 跨次稽核比對(若有 DB)
