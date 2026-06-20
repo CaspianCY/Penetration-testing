@@ -10,10 +10,13 @@
     <span id="progress-text">0%</span>
   </div>
   <p id="status-line" class="muted">狀態:<span id="status">pending</span>
-     ｜ 目前檢查:<span id="current-check">—</span></p>
+     ｜ <span id="live-action"><span class="pulse-dot"></span>目前作業:<span id="current-check">—</span></span></p>
+
+  <div class="phase-steps" id="phase-steps"></div>
 
   {% if error %}<div class="alert">⚠️ {{ error }}</div>{% endif %}
 
+  <div class="war-stats" id="war-stats"></div>
   <div class="sev-summary" id="sev-summary"></div>
 
   <div class="actions">
@@ -31,6 +34,11 @@
 <section class="card" id="crawl-card" hidden>
   <h2>爬取概況(站點地圖)</h2>
   <div id="crawl-info"></div>
+</section>
+
+<section class="card" id="timeline-card">
+  <h2>攻擊展示 — 作業時間軸<span class="muted" style="font-size:.8rem"> — 即時呈現偵察 / 測試 / 攻擊每一步</span></h2>
+  <ol id="timeline" class="timeline"><li class="muted">準備中…</li></ol>
 </section>
 
 <section class="card" id="flow-card">

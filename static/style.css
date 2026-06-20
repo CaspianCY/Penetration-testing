@@ -167,6 +167,73 @@ button:disabled { background: #cbd5e1; color: #f8fafc; cursor: not-allowed; box-
 }
 #progress-text { font-weight: 700; color: var(--accent); min-width: 3rem; text-align: right; }
 
+/* ---- 即時作業:現正進行脈動點 ---- */
+.pulse-dot {
+  display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: .4rem;
+  background: var(--accent); box-shadow: 0 0 0 0 var(--accent-ring); animation: pulse 1.4s infinite;
+  vertical-align: baseline;
+}
+#live-action.idle .pulse-dot { background: var(--ok); animation: none; box-shadow: none; }
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(37,99,235,.45); }
+  70% { box-shadow: 0 0 0 8px rgba(37,99,235,0); }
+  100% { box-shadow: 0 0 0 0 rgba(37,99,235,0); }
+}
+
+/* ---- 作戰階段步進器(PTES)---- */
+.phase-steps { display: flex; align-items: stretch; flex-wrap: wrap; gap: .15rem; margin: 1.1rem 0 .4rem; }
+.phase-step {
+  display: flex; align-items: center; gap: .4rem; padding: .42rem .8rem; border-radius: 999px;
+  background: #f1f5f9; border: 1px solid var(--border); color: var(--muted); font-size: .85rem;
+  transition: background .2s, color .2s, box-shadow .2s;
+}
+.phase-step .phase-ic { font-size: .95rem; filter: grayscale(1) opacity(.55); }
+.phase-step.done { background: #ecfdf5; border-color: #a7f3d0; color: #166534; }
+.phase-step.done .phase-ic { filter: none; }
+.phase-step.current {
+  background: linear-gradient(180deg, #eaf1ff, #dbeafe); border-color: #93c5fd; color: #1e40af;
+  font-weight: 750; box-shadow: 0 0 0 3px var(--accent-ring);
+}
+.phase-step.current .phase-ic { filter: none; }
+.phase-arrow { display: flex; align-items: center; color: #cbd5e1; font-weight: 800; padding: 0 .1rem; }
+.phase-arrow.done { color: #34d399; }
+
+/* ---- 即時戰情數據 ---- */
+.war-stats { display: flex; flex-wrap: wrap; gap: .6rem; margin: 1rem 0; }
+.war-cell {
+  flex: 1 1 auto; min-width: 5.2rem; display: flex; flex-direction: column; align-items: center;
+  padding: .6rem .7rem; background: linear-gradient(170deg, #ffffff, #f4f7fc);
+  border: 1px solid var(--border); border-radius: 11px;
+}
+.war-num { font-size: 1.35rem; font-weight: 800; color: var(--ink); line-height: 1.1; }
+.war-cap { font-size: .74rem; color: var(--muted); margin-top: .2rem; }
+
+/* ---- 攻擊展示:作業時間軸 ---- */
+.timeline {
+  list-style: none; margin: 0; padding: .3rem .2rem .3rem; max-height: 360px; overflow: auto;
+  position: relative;
+}
+.tl-item {
+  display: grid; grid-template-columns: 1.7rem 1fr auto; align-items: start; gap: .55rem;
+  padding: .42rem .55rem; border-radius: 9px; font-size: .88rem; position: relative;
+}
+.tl-item + .tl-item { margin-top: .12rem; }
+.tl-ic { text-align: center; font-size: .98rem; line-height: 1.5; }
+.tl-tx { color: var(--ink-2); word-break: break-word; }
+.tl-t { color: var(--faint); font-size: .72rem; font-variant-numeric: tabular-nums; white-space: nowrap;
+  font-family: ui-monospace, Menlo, Consolas, monospace; padding-top: .12rem; }
+.tl-start .tl-tx { color: var(--accent); font-weight: 650; }
+.tl-action { background: #f8fafc; }
+.tl-hit { background: #fef2f2; }
+.tl-hit .tl-tx { color: var(--high); font-weight: 700; }
+.tl-warn .tl-tx { color: var(--warn); font-weight: 600; }
+.tl-safe .tl-tx { color: var(--ok); font-weight: 600; }
+.tl-done .tl-tx { color: var(--ink); font-weight: 700; }
+.tl-item.current {
+  background: linear-gradient(90deg, #eff5ff, #ffffff); box-shadow: inset 3px 0 0 var(--accent);
+}
+.tl-item.current .tl-ic { animation: pulse 1.4s infinite; border-radius: 50%; }
+
 .sev-summary { display: flex; flex-wrap: wrap; gap: .5rem; margin: 1rem 0; }
 .sev-pill { color: #fff; padding: .32rem .85rem; border-radius: 999px; font-size: .82rem; font-weight: 700;
   letter-spacing: .2px; }

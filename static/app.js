@@ -77,6 +77,46 @@
 
   var sevInitial = { critical: "C", high: "H", medium: "M", low: "L", info: "I" };
 
+  function renderPhases(steps) {
+    var box = el("phase-steps");
+    if (!box || !steps) return;
+    box.innerHTML = steps.map(function (s, i) {
+      var arrow = i < steps.length - 1
+        ? "<span class='phase-arrow " + (s.state === "done" ? "done" : "") + "'>›</span>" : "";
+      return "<span class='phase-step " + s.state + "'>" +
+        "<span class='phase-ic'>" + s.icon + "</span>" +
+        "<span class='phase-lb'>" + esc(s.label) + "</span></span>" + arrow;
+    }).join("");
+  }
+
+  function renderWar(w) {
+    var box = el("war-stats");
+    if (!box || !w) return;
+    function cell(num, cap) {
+      return "<div class='war-cell'><span class='war-num'>" +
+        (num == null ? "—" : num) + "</span><span class='war-cap'>" + cap + "</span></div>";
+    }
+    box.innerHTML =
+      cell(w.pages, "頁面") + cell(w.forms, "表單") + cell(w.points, "可注入端點") +
+      cell(w.checks_done + " / " + w.checks_total, "檢查項") + cell(w.findings, "弱點");
+  }
+
+  function renderTimeline(events) {
+    var box = el("timeline");
+    if (!box) return;
+    if (!events || !events.length) { box.innerHTML = "<li class='muted'>準備中…</li>"; return; }
+    var atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+    var last = events.length - 1;
+    box.innerHTML = events.map(function (e, i) {
+      var cur = (i === last && e.kind === "action") ? " current" : "";
+      return "<li class='tl-item tl-" + (e.kind || "info") + cur + "'>" +
+        "<span class='tl-ic'>" + (e.icon || "•") + "</span>" +
+        "<span class='tl-tx'>" + esc(e.text) + "</span>" +
+        "<span class='tl-t'>" + esc(e.t || "") + "</span></li>";
+    }).join("");
+    if (atBottom) box.scrollTop = box.scrollHeight;   // 自動跟到最新一筆
+  }
+
   function renderFlow(flow) {
     if (!flow) return;
     var steps = flow.stages.map(function (s) {
@@ -156,12 +196,18 @@
     el("progress-fill").style.width = data.progress + "%";
     el("progress-text").textContent = data.progress + "%";
     el("status").textContent = data.status;
-    el("current-check").textContent = data.current_check || "—";
+    el("current-check").textContent = data.current_check || (data.status === "done" ? "已完成" : "—");
+    renderPhases(data.phase_steps);
+    renderWar(data.war);
+    renderTimeline(data.timeline);
     renderSummary(data.severity_counts);
     renderCrawl(data);
     renderFindings(data.findings);
     renderFlow(data.attack_flow);
     el("log").textContent = (data.log || []).join("\n");
+
+    var la = el("live-action");
+    if (la) la.classList.toggle("idle", data.status === "done" || data.status === "error");
 
     if (data.ai_summary) {
       el("ai-card").hidden = false;
