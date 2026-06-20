@@ -110,3 +110,87 @@ def test_discovers_html_pages_via_js_nav():
     assert "/api/stats/performance" in paths                              # 頁面註解裡的 API
     assert any(f.action.endswith("/api/upload") for f in ctx.crawl_result.forms)  # 上傳表單被抓到
     assert any(p.target_param == "period" for p in ctx.crawl_result.injection_points)
+
+
+def _api_server(live_paths):
+    """模擬後端 API:live_paths 回 JSON 200,其餘回 404(含基準探測路徑)。"""
+    class H(BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def do_GET(self):
+            path = self.path.split("?", 1)[0]
+            if path.lstrip("/") in live_paths:
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(b'{"data":[{"id":1},{"id":2}]}')
+            else:
+                self.send_response(404)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(b'{"error":"not found"}')
+    srv = HTTPServer(("127.0.0.1", 0), H)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    return srv
+
+
+def test_backend_api_content_discovery_when_authenticated():
+    """已認證 → 自動探出 JS 沒明寫的後端端點(/api/users、/api/me)。"""
+    srv = _api_server({"api/users", "api/me"})
+    try:
+        ctx = ScanContext(target=f"http://127.0.0.1:{srv.server_port}/", polite=False,
+                          cookies={"sid": "abc"})
+        res = apidiscovery.run(ctx)
+    finally:
+        srv.shutdown()
+    pages = " ".join(p for p in ctx.crawl_result.pages)
+    assert "/api/users" in pages
+    assert "/api/me" in pages
+
+
+def test_backend_probe_no_false_positive_on_spa_catchall():
+    """SPA 對任意路徑都回 200 HTML 空殼 → 內容探索不得誤判出端點。"""
+    class H(BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def do_GET(self):
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html")
+            self.end_headers()
+            self.wfile.write(b"<html><body><div id='root'></div></body></html>")
+    srv = HTTPServer(("127.0.0.1", 0), H)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    try:
+        ctx = ScanContext(target=f"http://127.0.0.1:{srv.server_port}/", polite=False,
+                          cookies={"sid": "abc"})
+        apidiscovery.run(ctx)
+    finally:
+        srv.shutdown()
+    api_pages = [p for p in ctx.crawl_result.pages if "/api/" in p]
+    assert api_pages == []        # 全是 SPA 空殼 → 不應探出任何 API 端點
+
+
+def test_no_backend_probe_when_unauthenticated_and_no_api():
+    """未認證、且 JS 也沒露出任何 /api/ → 不做後端內容探索(避免黑箱噪音)。"""
+    class H(BaseHTTPRequestHandler):
+        hits = []
+
+        def log_message(self, *a):
+            pass
+
+        def do_GET(self):
+            H.hits.append(self.path)
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html")
+            self.end_headers()
+            self.wfile.write(b"<html><body>plain site, no js, no api</body></html>")
+    srv = HTTPServer(("127.0.0.1", 0), H)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    try:
+        ctx = ScanContext(target=f"http://127.0.0.1:{srv.server_port}/", polite=False)
+        apidiscovery.run(ctx)
+    finally:
+        srv.shutdown()
+    assert not any("zz_sentinel_none" in h for h in H.hits)   # 沒有觸發內容探索基準探測
