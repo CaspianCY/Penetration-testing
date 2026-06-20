@@ -8,7 +8,7 @@ from urllib.parse import parse_qs
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from pentest import auth_login
+from pentest import auth_login, crawler
 from pentest.auth_login import LoginSpec
 from pentest.checks.base import ScanContext, Severity
 
@@ -57,10 +57,11 @@ def test_establish_session_success_and_masks_password():
     try:
         ctx = ScanContext(target=base + "/", polite=False, capture=True)
         spec = LoginSpec(url=base + "/login", username="alice", password="s3cret")
-        ok, cookies, detail = auth_login.establish_session(ctx, spec)
+        ok, cookies, detail, landing = auth_login.establish_session(ctx, spec)
     finally:
         srv.shutdown()
     assert ok and "sessionid" in cookies
+    assert "/account" in landing            # 落地頁可作為後台爬取起點
     # 流量側錄有記錄,且密碼以 **** 呈現、不外洩明文
     assert ctx.transcript
     blob = str(ctx.transcript)
@@ -105,3 +106,34 @@ def test_capture_off_records_nothing():
     ctx = ScanContext(target="http://t/", capture=False)
     ctx.record("GET", "http://t/", 200)
     assert ctx.transcript == []
+
+
+def test_crawl_reaches_pages_only_via_seed():
+    """登入後的後台(未從首頁連出)需靠 seed 才爬得到 → 驗證已認證掃描的深入。"""
+    class H(BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def do_GET(self):
+            if self.path.startswith("/admin"):
+                body = (b"<html><body><form action='/admin/save' method='post'>"
+                        b"<input name='q' type='text'></form></body></html>")
+            else:                                   # 首頁只連到 /public,完全不提 /admin
+                body = b"<html><body><a href='/public'>p</a></body></html>"
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html")
+            self.end_headers()
+            self.wfile.write(body)
+
+    srv = HTTPServer(("127.0.0.1", 0), H)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    base = f"http://127.0.0.1:{srv.server_port}"
+    try:
+        no_seed = crawler.crawl(ScanContext(target=base + "/", polite=False), max_pages=10)
+        seeded = crawler.crawl(ScanContext(target=base + "/", polite=False),
+                               max_pages=10, seeds=[base + "/admin"])
+    finally:
+        srv.shutdown()
+    assert not any("/admin" in p for p in no_seed.pages)          # 沒 seed → 爬不到後台
+    assert any("/admin" in p for p in seeded.pages)               # 有 seed → 爬到後台
+    assert any(pt.target_param == "q" for pt in seeded.injection_points)
