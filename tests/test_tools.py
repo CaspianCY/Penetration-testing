@@ -6,7 +6,10 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from pentest.checks.base import Severity
-from pentest.tools import nmap_tool, nuclei_tool, nikto_tool, ffuf_tool, sqlmap_tool
+from pentest.tools import (
+    nmap_tool, nuclei_tool, nikto_tool, ffuf_tool, sqlmap_tool,
+    whatweb_tool, wafw00f_tool, sslscan_tool,
+)
 
 
 def test_nmap_parse_flags_risky_service():
@@ -67,8 +70,30 @@ def test_sqlmap_is_vulnerable():
     assert not sqlmap_tool.is_vulnerable("all tested parameters do not appear to be injectable")
 
 
+def test_whatweb_parse_lists_tech_and_flags_notable():
+    fs = whatweb_tool.parse("http://x [200 OK] Apache[2.4], PHP[7.4], WordPress[6.0]")
+    assert any("技術指紋" in f.title for f in fs)
+    assert any("針對性測試" in f.title for f in fs)   # WordPress → notable
+    assert all(f.tool == "whatweb" for f in fs)
+
+
+def test_wafw00f_parse_detects_waf():
+    fs = wafw00f_tool.parse("[+] The site http://x is behind Cloudflare (Cloudflare Inc.) WAF.")
+    assert fs and "Cloudflare" in fs[0].title
+
+
+def test_sslscan_parse_flags_weak_protocols():
+    fs = sslscan_tool.parse("SSLv3      enabled\nTLSv1.0    enabled\nTLSv1.2    enabled")
+    sevs = {f.title: f.severity for f in fs}
+    assert any("SSLv3" in t and s == Severity.HIGH for t, s in sevs.items())
+    assert any("TLSv1.0" in t and s == Severity.MEDIUM for t, s in sevs.items())
+    # TLSv1.2 不應被標記
+    assert not any("TLSv1.2" in t for t in sevs)
+
+
 def test_adapters_registered():
     from pentest.tools import ADAPTERS, installed_summary
     names = {a.name for a in ADAPTERS}
-    assert {"nmap", "nuclei", "ffuf", "nikto", "sqlmap"} <= names
+    assert {"nmap", "nuclei", "ffuf", "nikto", "sqlmap",
+            "whatweb", "wafw00f", "sslscan"} <= names
     assert set(installed_summary().keys()) == names

@@ -78,6 +78,24 @@ python app.py
 # 開啟 http://127.0.0.1:5000
 ```
 
+### Kali 工具環境(Docker — 推薦的完整部署)
+
+最完整的跑法是用 **Kali Linux 容器**:內建所有編排器會用到的工具,並一起帶起
+PostgreSQL(資料持久化)。在任何有 Docker 的主機上:
+
+```bash
+docker compose up --build
+# 開啟 http://localhost:5000 —— 8 個工具全部就緒
+```
+
+- 基底為 `kalilinux/kali-rolling`,從 Kali repo 安裝:
+  `nmap nikto sqlmap whatweb wafw00f sslscan gobuster ffuf nuclei wfuzz dirb dnsrecon`
+- 資料存於具名 volume(`sentinel-db`),容器重啟仍在。
+- 要啟用 AI 模組:在 `docker-compose.yml` 取消 `ANTHROPIC_API_KEY` 註解並填金鑰。
+
+> 「深度掃描」的設計是**有裝就用、沒裝退回內建檢查**——所以不在 Kali 容器、
+> 只裝部分工具時也能跑,缺的工具會在主控台標示「未安裝」。
+
 ### 案件編排與專業報告(engage.py)
 
 `engage.py` 依 PTES 階段執行一次完整案件並產出 `.docx` 報告:

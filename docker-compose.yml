@@ -1,0 +1,40 @@
+# Sentinel(Kali 工具環境)+ PostgreSQL 持久化。
+# 使用:  docker compose up --build
+# 開啟:  http://localhost:5000
+#
+# 資料存於具名 volume(sentinel-db),容器重啟仍在。
+# ⚠️ 僅供你擁有或已獲授權測試的目標。
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: sentinel
+      POSTGRES_PASSWORD: sentinel
+      POSTGRES_DB: sentinel
+    volumes:
+      - sentinel-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sentinel"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  sentinel:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://sentinel:sentinel@db:5432/sentinel
+      SENTINEL_HOST: 0.0.0.0
+      SENTINEL_PORT: "5000"
+      # 啟用 AI 模組:取消下一行註解並填入金鑰
+      # ANTHROPIC_API_KEY: sk-ant-...
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
+
+volumes:
+  sentinel-db:
