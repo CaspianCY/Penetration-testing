@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}總覽儀表板 — Sentinel{% endblock %}
+{% block content %}
+{% if d.error %}
+  <section class="card"><div class="alert">⚠️ 無法載入儀表板資料:{{ d.error }}</div></section>
+{% elif d.scans_total == 0 and d.engagements_total == 0 %}
+  <section class="card empty">
+    <h2>總覽儀表板</h2>
+    <p class="muted">目前還沒有任何掃描或案件資料。</p>
+    <a class="btn-link" href="{{ url_for('index') }}">＋ 開始第一個掃描</a>
+  </section>
+{% else %}
+  {% set sev_order = ['critical','high','medium','low','info'] %}
+  {% set sev_label = {'critical':'嚴重','high':'高','medium':'中','low':'低','info':'資訊'} %}
+
+  <section class="card">
+    <h2>總覽儀表板</h2>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-num">{{ d.scans_total }}</div><div class="stat-cap">掃描總數</div></div>
+      <div class="stat-card"><div class="stat-num">{{ d.engagements_total }}</div><div class="stat-cap">案件報告</div></div>
+      <div class="stat-card"><div class="stat-num">{{ d.findings_total }}</div><div class="stat-cap">弱點總數</div></div>
+      <div class="stat-card crit"><div class="stat-num">{{ d.severity.critical }}</div><div class="stat-cap">嚴重 (Critical)</div></div>
+    </div>
+  </section>
+
+  <div class="grid-2">
+    <section class="card">
+      <h2>嚴重度分佈</h2>
+      {% set sev_max = (d.severity.values()|max) or 1 %}
+      <div class="bar-chart">
+        {% for s in sev_order %}
+        <div class="bar-row">
+          <span class="bar-label">{{ sev_label[s] }}</span>
+          <span class="bar-track"><span class="bar-fill sev-{{ s }}"
+            style="width: {{ ((d.severity[s] / sev_max) * 100)|round(0,'floor') }}%"></span></span>
+          <span class="bar-num">{{ d.severity[s] }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>近 14 天弱點趨勢</h2>
+      {% set tr_max = (d.trend|map(attribute='count')|max) or 1 %}
+      <div class="trend">
+        {% for t in d.trend %}
+        <div class="trend-col" title="{{ t.date }}:{{ t.count }} 項">
+          <span class="trend-bar" style="height: {{ (8 + (t.count / tr_max) * 92)|round(0,'floor') if t.count else 4 }}%"></span>
+          <span class="trend-date">{{ t.date }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>OWASP Top 10 (2021) 分佈</h2>
+    {% set ow_max = (d.owasp.values()|max) or 1 %}
+    <div class="bar-chart owasp">
+      {% for code, label in d.owasp_labels.items() %}
+      <div class="bar-row">
+        <span class="bar-label wide">{{ code }} · {{ label }}</span>
+        <span class="bar-track"><span class="bar-fill accent"
+          style="width: {{ ((d.owasp[code] / ow_max) * 100)|round(0,'floor') }}%"></span></span>
+        <span class="bar-num">{{ d.owasp[code] }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <div class="grid-2">
+    <section class="card">
+      <h2>近期掃描</h2>
+      {% if d.recent_scans %}
+      <ul class="job-list">
+        {% for s in d.recent_scans %}
+        <li>
+          <a class="job-target" href="{{ url_for('scan_view', job_id=s.id) }}">{{ s.target }}</a>
+          <span class="badge badge-{{ s.status }}">{{ s.status }}</span>
+          {% if s.severity.critical %}<span class="mini sev-critical">C{{ s.severity.critical }}</span>{% endif %}
+          {% if s.severity.high %}<span class="mini sev-high">H{{ s.severity.high }}</span>{% endif %}
+          <span class="muted">{{ s.progress }}%</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}<p class="muted">尚無掃描。</p>{% endif %}
+    </section>
+
+    <section class="card">
+      <h2>近期案件報告</h2>
+      {% if d.recent_engagements %}
+      <ul class="job-list">
+        {% for e in d.recent_engagements %}
+        <li>
+          <span class="job-target">{{ e.name }}</span>
+          <span class="badge">{{ e.methodology }} · {{ e.test_type }}</span>
+          {% if e.severity.critical %}<span class="mini sev-critical">C{{ e.severity.critical }}</span>{% endif %}
+          {% if e.severity.high %}<span class="mini sev-high">H{{ e.severity.high }}</span>{% endif %}
+          <span class="muted">{{ e.findings }} 項</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}<p class="muted">尚無案件報告(以 engage.py 產生)。</p>{% endif %}
+    </section>
+  </div>
+{% endif %}
+{% endblock %}

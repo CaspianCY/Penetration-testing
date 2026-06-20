@@ -38,6 +38,15 @@ def index():
     return render_template("index.html", jobs=manager.list_jobs())
 
 
+@app.route("/dashboard")
+def dashboard():
+    try:
+        data = storage.dashboard_data()
+    except Exception as exc:
+        data = {"error": str(exc)}
+    return render_template("dashboard.html", d=data)
+
+
 @app.route("/scan", methods=["POST"])
 def start_scan():
     target = request.form.get("target", "")
