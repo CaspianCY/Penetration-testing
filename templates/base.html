@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Sentinel 弱掃平台{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header>
+    <h1><a href="{{ url_for('index') }}">🛡️ Sentinel</a></h1>
+    <p class="tagline">授權式 Web 弱點掃描與報告平台 — 僅供你擁有或已獲授權測試的目標</p>
+  </header>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+  <footer>
+    <p>非破壞性掃描 · 不含規避偵測功能 · 使用前請閱讀 AUTHORIZATION.md</p>
+  </footer>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

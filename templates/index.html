@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2>開始新掃描</h2>
+  {% if error %}<div class="alert">⚠️ {{ error }}</div>{% endif %}
+  <form method="post" action="{{ url_for('start_scan') }}">
+    <label>目標網址
+      <input type="text" name="target" placeholder="https://example.com" required
+             autocomplete="off">
+    </label>
+
+    <label class="checkbox">
+      <input type="checkbox" name="polite" checked>
+      低衝擊模式(限速、降低對目標負載 — 建議開啟)
+    </label>
+
+    <label class="checkbox attest">
+      <input type="checkbox" name="attested" required>
+      我確認我<strong>擁有此目標</strong>,或已取得擁有者的<strong>明確授權</strong>進行測試。
+    </label>
+
+    <button type="submit">開始掃描</button>
+  </form>
+  <p class="hint">本平台只做非破壞性檢查(讀取式探測),不發送攻擊 payload、不嘗試利用漏洞,
+     也不提供任何規避偵測功能。</p>
+</section>
+
+{% if jobs %}
+<section class="card">
+  <h2>近期掃描</h2>
+  <ul class="job-list">
+    {% for job in jobs %}
+    <li>
+      <a href="{{ url_for('scan_view', job_id=job.id) }}">{{ job.scope.target }}</a>
+      <span class="badge badge-{{ job.status }}">{{ job.status }}</span>
+      <span class="muted">{{ job.progress }}%</span>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+{% endblock %}

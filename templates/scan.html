@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}掃描 {{ job.scope.target }} — Sentinel{% endblock %}
+{% block content %}
+<section class="card" id="scan" data-job-id="{{ job.id }}">
+  <h2>掃描儀表板</h2>
+  <p class="muted">目標:<strong>{{ job.scope.target }}</strong> ｜ 任務 ID:{{ job.id }}</p>
+
+  <div class="progress-wrap">
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+    <span id="progress-text">0%</span>
+  </div>
+  <p id="status-line" class="muted">狀態:<span id="status">pending</span>
+     ｜ 目前檢查:<span id="current-check">—</span></p>
+
+  <div class="sev-summary" id="sev-summary"></div>
+
+  <div class="actions">
+    <button id="ai-btn" disabled>🤖 AI 分析與修補計畫</button>
+    <a id="dl-html" class="btn-link" href="{{ url_for('download_report', job_id=job.id, fmt='html') }}">下載 HTML 報告</a>
+    <a id="dl-md" class="btn-link" href="{{ url_for('download_report', job_id=job.id, fmt='md') }}">下載 Markdown</a>
+    <a id="dl-json" class="btn-link" href="{{ url_for('download_report', job_id=job.id, fmt='json') }}">下載 JSON</a>
+  </div>
+</section>
+
+<section class="card" id="ai-card" hidden>
+  <h2>🤖 AI 分析與修補計畫</h2>
+  <div id="ai-summary" class="ai"></div>
+</section>
+
+<section class="card">
+  <h2>弱點清單</h2>
+  <div id="findings"></div>
+</section>
+
+<section class="card">
+  <h2>進度日誌</h2>
+  <pre id="log" class="log"></pre>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+{% endblock %}
