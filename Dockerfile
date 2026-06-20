@@ -28,6 +28,9 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip3 install --no-cache-dir --break-system-packages -r requirements.txt gunicorn
 
+# headless 瀏覽器(動態爬取 JS 導覽 / SPA 後台);失敗不擋 build,執行期會自動退回靜態爬取
+RUN playwright install --with-deps chromium || true
+
 COPY . .
 RUN chmod +x entrypoint.sh
 

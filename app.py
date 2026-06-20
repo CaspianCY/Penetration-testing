@@ -269,6 +269,7 @@ def start_scan():
     crawl = request.form.get("crawl", "on") == "on"
     capture = request.form.get("capture") == "on"
     resilience = request.form.get("resilience") == "on"
+    browser = request.form.get("browser") == "on"
     try:
         max_pages = max(1, min(int(request.form.get("max_pages", 40)), 100))
     except (TypeError, ValueError):
@@ -327,7 +328,8 @@ def start_scan():
     job = manager.start(scope, polite=polite, active=active, aggressive=aggressive,
                         crawl=crawl, max_pages=max_pages, deep=deep,
                         login=login, capture=capture, resilience=resilience, proxy=proxy,
-                        cookies=cookies, auth_headers=auth_headers, api_endpoints=api_endpoints)
+                        cookies=cookies, auth_headers=auth_headers, api_endpoints=api_endpoints,
+                        browser=browser)
     return redirect(url_for("scan_view", job_id=job.id))
 
 

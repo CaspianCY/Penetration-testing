@@ -8,3 +8,6 @@ SQLAlchemy>=2.0
 psycopg[binary]>=3.1
 # 專業 .docx 報告產出
 python-docx>=1.1
+# headless 瀏覽器動態爬取(處理 JS 導覽 / SPA);需另跑 `playwright install chromium`。
+# 未安裝時平台會自動退回靜態爬取,不影響其他功能。
+playwright>=1.40

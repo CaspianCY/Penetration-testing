@@ -29,6 +29,11 @@
       <span class="lt">流量側錄<span class="muted">(記錄掃描器自己送出的請求 / 回應軌跡,作為報告證據;敏感值自動遮罩)</span></span>
     </label>
 
+    <label class="checkbox">
+      <input type="checkbox" name="browser">
+      <span class="lt">🌐 瀏覽器動態爬取<span class="muted">(用 headless Chromium <strong>執行 JS</strong>、跟隨選單 / SPA 路由、攔截實際的 API 呼叫 —— 處理 JS 導覽 / 動態頁面的後台。部署需安裝 playwright + chromium)</span></span>
+    </label>
+
     <div class="field">
       <label for="proxy">出口 Proxy / VPN（選用）</label>
       <input type="text" id="proxy" name="proxy" autocomplete="off"
