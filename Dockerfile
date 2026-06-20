@@ -28,8 +28,16 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip3 install --no-cache-dir --break-system-packages -r requirements.txt gunicorn
 
-# headless 瀏覽器(動態爬取 JS 導覽 / SPA 後台);失敗不擋 build,執行期會自動退回靜態爬取
-RUN playwright install --with-deps chromium || true
+# headless 瀏覽器(動態爬取 JS 導覽 / SPA 後台,灰箱預設使用)。
+# 安裝後立即驗證執行檔是否就位,並把結果印進 build log —— 不再讓 `|| true` 悄悄吞掉失敗。
+# 安裝失敗不擋 build(執行期會退回靜態爬取),但 log 會明確顯示成功/失敗。
+RUN (playwright install --with-deps chromium || playwright install chromium || true) \
+    && python3 -c "from playwright.sync_api import sync_playwright; \
+import os,sys; \
+p=sync_playwright().start(); path=p.chromium.executable_path; p.stop(); \
+ok=bool(path) and os.path.exists(path); \
+print('[build] Chromium 動態引擎:', '就緒 -> '+path if ok else '未就緒(執行期將退回靜態爬取)'); \
+sys.exit(0)"
 
 COPY . .
 RUN chmod +x entrypoint.sh

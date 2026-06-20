@@ -119,9 +119,16 @@ def _require_login():
 def _tools_summary() -> dict:
     try:
         from pentest.tools import installed_summary
-        return installed_summary()
+        tools = installed_summary()
     except Exception:
-        return {}
+        tools = {}
+    # 動態測試引擎(headless Chromium)是否就緒 —— 讓使用者看得到「動態」有沒有可用
+    try:
+        from pentest.browser_crawl import available as _browser_available
+        tools["chromium(動態)"] = _browser_available()
+    except Exception:
+        tools["chromium(動態)"] = False
+    return tools
 
 
 @app.route("/")
@@ -491,6 +498,12 @@ def _startup_banner() -> None:
     """印出資料庫位置與現有筆數(密碼遮罩),讓使用者確認設定。"""
     print(f"[Sentinel] 資料庫:{_mask(_DB_URL)}")
     print(f"[Sentinel] 登入保護:{'啟用(HTTP Basic)' if _AUTH_PASSWORD else '未啟用 — 公開部署請設定 SENTINEL_PASSWORD'}")
+    try:
+        from pentest.browser_crawl import available as _ba
+        ok = _ba()
+        print(f"[Sentinel] 動態測試引擎(Chromium):{'就緒 — 灰箱將自動進行動態測試' if ok else '未安裝 — 將退回靜態爬取;執行 playwright install --with-deps chromium 以啟用'}")
+    except Exception:
+        print("[Sentinel] 動態測試引擎(Chromium):未安裝(playwright 不可用)")
     if _DB_URL.startswith("sqlite"):
         path = _DB_URL.replace("sqlite:///", "")
         exists = os.path.exists(path)

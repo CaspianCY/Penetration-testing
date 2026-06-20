@@ -87,9 +87,43 @@ def test_explains_why_when_browser_engine_unavailable(monkeypatch):
     finally:
         srv.shutdown()
 
-    # 無瀏覽器引擎時,至少要在報告/時間軸說明「為什麼只有少數頁面」
-    assert any(f.check_id == "crawl-js-app-static-only" for f in job.findings)
-    assert any("JavaScript 動態渲染" in e["text"] for e in job.timeline)
+    # 無瀏覽器引擎時,要在報告/時間軸明確說明「需要動態測試但引擎未安裝」
+    assert any(f.check_id == "crawl-dynamic-engine-missing" for f in job.findings)
+    assert any("未安裝瀏覽器引擎" in e["text"] for e in job.timeline)
+
+
+def test_greybox_defaults_to_dynamic_even_with_pages(monkeypatch):
+    """灰箱(已認證)即使靜態爬到多頁,也應預設啟用瀏覽器動態爬取。"""
+    # 多連結的一般 HTML 站(靜態會爬到 >3 頁),但帶 cookie = 灰箱
+    class H(BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def do_GET(self):
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html")
+            self.end_headers()
+            self.wfile.write(b"<html><body><a href='/a'>a</a><a href='/b'>b</a>"
+                             b"<a href='/c'>c</a><a href='/d'>d</a></body></html>")
+
+    srv = HTTPServer(("127.0.0.1", 0), H)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    base = f"http://127.0.0.1:{srv.server_port}"
+    monkeypatch.setattr(browser_crawl, "available", lambda: True)
+    called = {"n": 0}
+    monkeypatch.setattr(browser_crawl, "browser_crawl",
+                        lambda *a, **k: called.__setitem__("n", called["n"] + 1) or
+                        {"pages": [], "api_calls": [], "html_by_page": {}})
+    scope = ScopeRecord(target=base + "/", host="127.0.0.1", authorized_by="self", attested=True)
+    # 帶 cookie → 已認證(灰箱)
+    job = ScanManager().start(scope, polite=False, crawl=True, active=False, browser=False,
+                              cookies={"sid": "abc"})
+    try:
+        _await(job)
+    finally:
+        srv.shutdown()
+    assert called["n"] == 1                                          # 灰箱預設用了動態
+    assert any("灰箱已認證 → 預設啟用瀏覽器動態爬取" in e["text"] for e in job.timeline)
 
 
 def test_no_auto_browser_for_plain_html_site(monkeypatch):
