@@ -70,7 +70,7 @@
 
   <div class="grid-2">
     <section class="card">
-      <h2>近期掃描</h2>
+      <h2>近期掃描 <a class="see-all" href="{{ url_for('scans_list') }}">查看全部 →</a></h2>
       {% if d.recent_scans %}
       <ul class="job-list">
         {% for s in d.recent_scans %}
@@ -87,12 +87,12 @@
     </section>
 
     <section class="card">
-      <h2>近期案件報告</h2>
+      <h2>近期案件報告 <a class="see-all" href="{{ url_for('engagements_list') }}">查看全部 →</a></h2>
       {% if d.recent_engagements %}
       <ul class="job-list">
         {% for e in d.recent_engagements %}
         <li>
-          <span class="job-target">{{ e.name }}</span>
+          <a class="job-target" href="{{ url_for('engagement_view', eng_id=e.id) }}">{{ e.name }}</a>
           <span class="badge">{{ e.methodology }} · {{ e.test_type }}</span>
           {% if e.severity.critical %}<span class="mini sev-critical">C{{ e.severity.critical }}</span>{% endif %}
           {% if e.severity.high %}<span class="mini sev-high">H{{ e.severity.high }}</span>{% endif %}

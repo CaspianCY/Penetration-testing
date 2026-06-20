@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}案件報告 — Sentinel{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>案件報告 <span class="muted">（共 {{ total }} 筆）</span></h2>
+  {% if rows %}
+  <table class="data-table">
+    <thead><tr><th>名稱</th><th>方法論</th><th>類型</th><th>弱點</th><th>嚴重度</th><th>時間</th><th></th></tr></thead>
+    <tbody>
+      {% for e in rows %}
+      <tr>
+        <td><a href="{{ url_for('engagement_view', eng_id=e.id) }}">{{ e.name }}</a>
+            <div class="muted small">{{ e.target }}</div></td>
+        <td><span class="badge">{{ e.methodology }}</span></td>
+        <td>{{ e.test_type }}</td>
+        <td>{{ e.findings }}</td>
+        <td class="sev-cell">
+          {% if e.severity.critical %}<span class="mini sev-critical">C{{ e.severity.critical }}</span>{% endif %}
+          {% if e.severity.high %}<span class="mini sev-high">H{{ e.severity.high }}</span>{% endif %}
+          {% if e.severity.medium %}<span class="mini sev-medium">M{{ e.severity.medium }}</span>{% endif %}
+        </td>
+        <td class="muted">{{ e.created }}</td>
+        <td><a class="btn-link tiny" href="{{ url_for('engagement_report', eng_id=e.id) }}">.docx</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% include "_pager.html" with context %}
+  {% else %}
+  <p class="muted">尚無案件報告。以 <code>engage.py</code> 產生(加 <code>--db</code> 即會寫入)。</p>
+  {% endif %}
+</section>
+{% endblock %}

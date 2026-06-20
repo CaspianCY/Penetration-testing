@@ -15,6 +15,7 @@ from flask import (
     redirect,
     render_template,
     request,
+    send_file,
     url_for,
 )
 
@@ -45,6 +46,57 @@ def dashboard():
     except Exception as exc:
         data = {"error": str(exc)}
     return render_template("dashboard.html", d=data)
+
+
+@app.route("/scans")
+def scans_list():
+    page = max(int(request.args.get("page", 1)), 1)
+    per = 25
+    rows = storage.list_scans(limit=per, offset=(page - 1) * per)
+    total = storage.count_scans()
+    return render_template("scans.html", rows=rows, page=page, per=per, total=total)
+
+
+@app.route("/engagements")
+def engagements_list():
+    page = max(int(request.args.get("page", 1)), 1)
+    per = 25
+    rows = storage.list_engagements(limit=per, offset=(page - 1) * per)
+    total = storage.count_engagements()
+    return render_template("engagements.html", rows=rows, page=page, per=per, total=total)
+
+
+@app.route("/engagements/<eng_id>")
+def engagement_view(eng_id: str):
+    e = storage.load_engagement(eng_id)
+    if not e:
+        abort(404)
+    return render_template("engagement.html", e=e)
+
+
+@app.route("/engagements/<eng_id>/report.docx")
+def engagement_report(eng_id: str):
+    import tempfile
+
+    from pentest import docx_report
+    from pentest.checks.base import Finding
+    from pentest.engagement import Engagement
+
+    e = storage.load_engagement(eng_id)
+    if not e:
+        abort(404)
+    eng = Engagement(
+        target=e["target"], name=e["name"], methodology=e["methodology"],
+        test_type=e["test_type"], tester=e["tester"], id=e["id"], created_at=e["created_at"],
+    )
+    findings = [Finding(**f) for f in e["findings"]]
+    tmp = tempfile.NamedTemporaryFile(suffix=".docx", delete=False)
+    tmp.close()
+    docx_report.generate(eng, findings, tmp.name)
+    return send_file(
+        tmp.name, as_attachment=True, download_name=f"{eng_id}.docx",
+        mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
 
 
 @app.route("/scan", methods=["POST"])

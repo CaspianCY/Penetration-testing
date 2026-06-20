@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}{{ e.name }} — 案件報告 — Sentinel{% endblock %}
+{% block content %}
+{% set sev_order = ['critical','high','medium','low','info'] %}
+{% set sev_label = {'critical':'嚴重','high':'高','medium':'中','low':'低','info':'資訊'} %}
+{% set status_label = {'new':'🆕 New','recurring':'🔁 Recurring','fixed':'✅ Fixed'} %}
+{% set method_label = {'white-box':'白箱','grey-box':'灰箱','black-box':'黑箱'} %}
+
+<section class="card">
+  <div class="detail-head">
+    <h2>{{ e.name }}</h2>
+    <a class="btn-link" href="{{ url_for('engagement_report', eng_id=e.id) }}">⬇ 下載 .docx 報告</a>
+  </div>
+  <table class="data-table meta">
+    <tr><th>案件代號</th><td>{{ e.id }}</td></tr>
+    <tr><th>評估對象</th><td>{{ e.target }}</td></tr>
+    <tr><th>方法論</th><td>{{ method_label.get(e.methodology, e.methodology) }} {{ e.test_type }}</td></tr>
+    <tr><th>撰寫者</th><td>{{ e.tester }}</td></tr>
+    <tr><th>日期</th><td>{{ e.created }}</td></tr>
+  </table>
+  <div class="sev-summary">
+    {% for s in sev_order %}
+    <span class="sev-pill sev-{{ s }}">{{ sev_label[s] }} {{ e.severity[s] }}</span>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="card">
+  <h2>Findings</h2>
+  {% set shown = [] %}
+  {% for f in e.findings if f.severity != 'info' %}
+  {% set _ = shown.append(1) %}
+  <article class="finding sev-{{ f.severity }}" style="border-left-color: var(--{{ f.severity }})">
+    <h3>
+      <span class="sev-pill sev-{{ f.severity }}">{{ sev_label.get(f.severity, f.severity) }}</span>
+      {{ f.title }}
+      {% if f.status %}<span class="badge">{{ status_label.get(f.status, f.status) }}</span>{% endif %}
+    </h3>
+    <p class="meta-line muted">
+      {{ f.owasp or '—' }} · {{ f.cwe or '—' }} ·
+      CVSS {{ '%.1f'|format(f.cvss) if f.cvss else '—' }}
+      {% if f.confidence %} · 信心 {{ f.confidence }}{% endif %}
+      {% if f.location %} · <code>{{ f.location }}</code>{% endif %}
+    </p>
+    <p>{{ f.description }}</p>
+    {% if f.evidence %}<pre>{{ f.evidence }}</pre>{% endif %}
+    {% if f.poc %}<p><strong>PoC(無害)</strong></p><pre>{{ f.poc }}</pre>{% endif %}
+    <p><strong>修補建議</strong>:{{ f.remediation }}
+       {% if f.remediation_cost %}<span class="muted">(成本:{{ f.remediation_cost }})</span>{% endif %}</p>
+  </article>
+  {% endfor %}
+  {% if not shown %}<p class="muted">本案件未發現 INFO 以上等級的弱點。</p>{% endif %}
+</section>
+{% endblock %}

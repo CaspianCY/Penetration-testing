@@ -1,0 +1,8 @@
+{% set pages = ((total - 1) // per) + 1 if total else 1 %}
+{% if pages > 1 %}
+<div class="pager">
+  {% if page > 1 %}<a class="btn-link tiny" href="?page={{ page - 1 }}">← 上一頁</a>{% endif %}
+  <span class="muted">第 {{ page }} / {{ pages }} 頁</span>
+  {% if page < pages %}<a class="btn-link tiny" href="?page={{ page + 1 }}">下一頁 →</a>{% endif %}
+</div>
+{% endif %}

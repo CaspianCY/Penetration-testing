@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}掃描紀錄 — Sentinel{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>掃描紀錄 <span class="muted">（共 {{ total }} 筆）</span></h2>
+  {% if rows %}
+  <table class="data-table">
+    <thead><tr><th>目標</th><th>狀態</th><th>進度</th><th>弱點</th><th>嚴重度</th><th>時間</th></tr></thead>
+    <tbody>
+      {% for s in rows %}
+      <tr>
+        <td><a href="{{ url_for('scan_view', job_id=s.id) }}">{{ s.target }}</a></td>
+        <td><span class="badge badge-{{ s.status }}">{{ s.status }}</span></td>
+        <td>{{ s.progress }}%</td>
+        <td>{{ s.findings }}</td>
+        <td class="sev-cell">
+          {% if s.severity.critical %}<span class="mini sev-critical">C{{ s.severity.critical }}</span>{% endif %}
+          {% if s.severity.high %}<span class="mini sev-high">H{{ s.severity.high }}</span>{% endif %}
+          {% if s.severity.medium %}<span class="mini sev-medium">M{{ s.severity.medium }}</span>{% endif %}
+          {% if s.severity.low %}<span class="mini sev-low">L{{ s.severity.low }}</span>{% endif %}
+        </td>
+        <td class="muted">{{ s.created }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% include "_pager.html" with context %}
+  {% else %}
+  <p class="muted">尚無掃描紀錄。<a href="{{ url_for('index') }}">開始一個掃描 →</a></p>
+  {% endif %}
+</section>
+{% endblock %}
