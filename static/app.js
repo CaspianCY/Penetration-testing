@@ -28,11 +28,22 @@
           .join("");
         const refsHtml = refs ? `<p><strong>參考</strong></p><ul>${refs}</ul>` : "";
         const ev = f.evidence ? `<p><strong>證據</strong></p><pre>${esc(f.evidence)}</pre>` : "";
+        const meta = [
+          f.tool ? "🛠 " + esc(f.tool) : "",
+          f.owasp ? esc(f.owasp) : "",
+          f.cwe ? esc(f.cwe) : "",
+          f.cvss ? "CVSS " + f.cvss : "",
+          f.attack ? "ATT&CK " + esc(f.attack) : "",
+        ].filter(Boolean).join(" · ");
+        const metaHtml = meta ? `<p class="meta-line muted">${meta}</p>` : "";
+        const vec = f.cvss_vector ? `<p class="muted small"><code>${esc(f.cvss_vector)}</code></p>` : "";
         return `<article class="finding sev-${f.severity}" style="border-left-color:var(--${f.severity})">
           <h3><span class="sev-pill sev-${f.severity}">${sevLabels[f.severity]}</span> ${esc(f.title)}</h3>
+          ${metaHtml}
           <p><strong>說明</strong>:${esc(f.description)}</p>
           ${ev}
           <p><strong>修補建議</strong>:${esc(f.remediation)}</p>
+          ${vec}
           ${refsHtml}
         </article>`;
       })

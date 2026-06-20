@@ -42,11 +42,14 @@
       {% if f.status %}<span class="badge">{{ status_label.get(f.status, f.status) }}</span>{% endif %}
     </h3>
     <p class="meta-line muted">
+      {% if f.tool %}🛠 {{ f.tool }} · {% endif %}
       {{ f.owasp or '—' }} · {{ f.cwe or '—' }} ·
       CVSS {{ '%.1f'|format(f.cvss) if f.cvss else '—' }}
+      {% if f.attack %} · ATT&CK {{ f.attack }}{% endif %}
       {% if f.confidence %} · 信心 {{ f.confidence }}{% endif %}
       {% if f.location %} · <code>{{ f.location }}</code>{% endif %}
     </p>
+    {% if f.cvss_vector %}<p class="muted small"><code>{{ f.cvss_vector }}</code></p>{% endif %}
     <p>{{ f.description }}</p>
     {% if f.evidence %}<pre>{{ f.evidence }}</pre>{% endif %}
     {% if f.poc %}<p><strong>PoC(無害)</strong></p><pre>{{ f.poc }}</pre>{% endif %}

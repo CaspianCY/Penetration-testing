@@ -40,9 +40,17 @@ storage = Storage(_DB_URL)
 manager = ScanManager(storage=storage)
 
 
+def _tools_summary() -> dict:
+    try:
+        from pentest.tools import installed_summary
+        return installed_summary()
+    except Exception:
+        return {}
+
+
 @app.route("/")
 def index():
-    return render_template("index.html", jobs=manager.list_jobs())
+    return render_template("index.html", jobs=manager.list_jobs(), tools=_tools_summary())
 
 
 @app.route("/dashboard")
@@ -115,22 +123,23 @@ def start_scan():
     polite = request.form.get("polite", "on") == "on"
     active = request.form.get("active") == "on"
     aggressive = request.form.get("aggressive") == "on"
+    deep = request.form.get("deep") == "on"
     crawl = request.form.get("crawl", "on") == "on"
     try:
         max_pages = max(1, min(int(request.form.get("max_pages", 40)), 100))
     except (TypeError, ValueError):
         max_pages = 40
-    # 主動測試需額外確認
-    if active and request.form.get("active_attested") != "on":
-        err = "啟用主動測試需另外確認你已獲授權對目標送出測試 payload。"
-        return render_template("index.html", jobs=manager.list_jobs(), error=err), 400
+    # 主動測試 / 深度掃描皆會主動送出流量,需額外授權確認
+    if (active or deep) and request.form.get("active_attested") != "on":
+        err = "啟用主動測試 / 深度掃描需另外確認你已獲授權對目標送出測試流量。"
+        return render_template("index.html", jobs=manager.list_jobs(), tools=_tools_summary(), error=err), 400
     try:
         scope = authorize(target, attested=attested)
     except AuthorizationError as exc:
-        return render_template("index.html", jobs=manager.list_jobs(), error=str(exc)), 400
+        return render_template("index.html", jobs=manager.list_jobs(), tools=_tools_summary(), error=str(exc)), 400
 
     job = manager.start(scope, polite=polite, active=active, aggressive=aggressive,
-                        crawl=crawl, max_pages=max_pages)
+                        crawl=crawl, max_pages=max_pages, deep=deep)
     return redirect(url_for("scan_view", job_id=job.id))
 
 

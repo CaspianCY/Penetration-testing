@@ -35,9 +35,20 @@
         <input type="checkbox" name="aggressive">
         <span class="lt">併用時間延遲偵測<span class="muted">(對目標負載較高,偵測較準)</span></span>
       </label>
+      <label class="checkbox">
+        <input type="checkbox" name="deep" id="deep-toggle">
+        <span class="lt">深度掃描:呼叫業界真實工具<strong>(nmap / nuclei / ffuf / nikto / sqlmap)</strong>,
+          依 PTES 階段編排,主控台即時輸出。</span>
+      </label>
+      {% if tools %}
+      <p class="hint sub-hint">工具狀態:
+        {% for name, ok in tools.items() %}<span class="tool-chip {{ 'on' if ok else 'off' }}">{{ name }}{{ ' ✓' if ok else ' ✕' }}</span>{% endfor %}
+        <br>(沒裝的工具會自動退回內建檢查;sqlmap 僅偵測、不取資料)
+      </p>
+      {% endif %}
       <label class="checkbox attest" id="active-attest" hidden>
         <input type="checkbox" name="active_attested">
-        <span class="lt">我了解主動測試會<strong>主動送出測試 payload</strong>,並確認已獲授權對此目標執行。</span>
+        <span class="lt">我了解主動測試 / 深度掃描會<strong>主動送出測試流量</strong>,並確認已獲授權對此目標執行。</span>
       </label>
       <p class="hint">本工具僅<strong>偵測</strong>漏洞是否存在(證明竄改的可能性),
         <strong>不會</strong>實際執行 UPDATE / DELETE / DROP 去更動你的資料。</p>
@@ -72,14 +83,18 @@
 
 {% block scripts %}
 <script>
-  // 勾選「主動測試」時,顯示其專屬的授權確認
-  var toggle = document.getElementById("active-toggle");
+  // 勾選「主動測試」或「深度掃描」時,顯示其專屬的授權確認
+  var active = document.getElementById("active-toggle");
+  var deep = document.getElementById("deep-toggle");
   var attest = document.getElementById("active-attest");
-  if (toggle && attest) {
-    toggle.addEventListener("change", function () {
-      attest.hidden = !toggle.checked;
-      attest.querySelector("input").required = toggle.checked;
-    });
+  function syncAttest() {
+    var need = (active && active.checked) || (deep && deep.checked);
+    attest.hidden = !need;
+    attest.querySelector("input").required = need;
+  }
+  if (attest) {
+    if (active) active.addEventListener("change", syncAttest);
+    if (deep) deep.addEventListener("change", syncAttest);
   }
   // 「爬取整站」未勾選時,隱藏頁數上限
   var crawl = document.getElementById("crawl-toggle");

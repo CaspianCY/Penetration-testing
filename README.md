@@ -23,6 +23,12 @@ HTML / Markdown / JSON 報告。內建一個 AI 模組(由 Claude 驅動),會分
   - 反射型 XSS(標記反射偵測)
   - 開放轉址(Open Redirect)
   - 僅**證明漏洞存在**,不執行 UPDATE / DELETE / DROP 去更動資料
+- **深度掃描 / 工具編排(opt-in)** — 呼叫業界真實工具,依 PTES 階段編排,
+  主控台即時輸出;有裝就跑、沒裝自動退回內建檢查:
+  - **Nmap**(埠/服務偵察)、**ffuf**(內容探索/目錄爆破)、
+    **Nuclei**(數千模板化弱點掃描)、**Nikto**(Web 伺服器)、
+    **sqlmap**(SQLi 偵測,安全模式、不取資料)
+  - findings 映射到 OWASP / CWE / **CVSS 3.1 向量** / **MITRE ATT&CK** 技術
 - **即時進度儀表板** — 攻擊方(測試者)可即時看到每一項檢查的進度。
 - **弱點報告** — 依嚴重度分類,每項弱點都附修補建議與參考連結。
 - **修補指引** — 直接告訴你「怎麼修」。
@@ -55,6 +61,12 @@ XSS 也僅檢查標記是否被未跳脫反射、不執行實際攻擊。所有�
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
+
+# 選用:安裝業界工具以啟用「深度掃描」(沒裝會自動退回內建檢查)
+sudo apt-get install -y nmap nikto sqlmap        # Debian/Ubuntu
+go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
+go install github.com/ffuf/ffuf/v2@latest
+nuclei -update-templates                          # 首次需下載模板
 
 # 選用:設定 Claude API 金鑰以啟用 AI 模組(未設定時自動退回規則式分析)
 export ANTHROPIC_API_KEY="sk-ant-..."
