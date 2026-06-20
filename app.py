@@ -463,10 +463,11 @@ def scan_to_engagement(job_id: str):
     if job.status != "done":
         return redirect(url_for("scan_view", job_id=job_id))
 
-    # 依掃描設定推導方法論 / 測試類型
+    # 依掃描設定推導方法論 / 測試類型(認證資訊在 job 上,不在 scope 上)
     test_type = "DAST"
-    methodology = "grey-box" if (job.scope.__dict__.get("auth_headers") or
-                                 job.scope.__dict__.get("cookies")) else "black-box"
+    authenticated = bool(getattr(job, "_login", None) or getattr(job, "_cookies", None)
+                         or getattr(job, "_auth_headers", None))
+    methodology = "grey-box" if authenticated else "black-box"
     name = (request.form.get("name") or "").strip() or f"{job.scope.target} 滲透測試"
     tester = (request.form.get("tester") or "").strip() or "Sentinel 平台"
     client = (request.form.get("client") or "").strip()
